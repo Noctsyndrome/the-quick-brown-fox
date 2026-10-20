@@ -1,0 +1,21 @@
+{
+  "$schema": "https://unpkg.com/wrangler@4.151.2/config-schema.json",
+  "name": "the-quick-brown-fox",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": false,
+  "assets": {
+    "directory": "./public",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "none"
+  },
+  "routes": [
+    {
+      "pattern": "www.denkibrew.com/the-quick-brown-fox-jumps-over-the-lazy-dog",
+      "zone_name": "denkibrew.com"
+    },
+    {
+      "pattern": "www.denkibrew.com/the-quick-brown-fox-jumps-over-the-lazy-dog/*",
+      "zone_name": "denkibrew.com"
+    }
+  ]
+}

@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Quick Brown Fox PS1</title>
+<meta name="description" content="A PS1-style low-poly scene: the quick brown fox jumps over the lazy dog.">
+<link rel="preload" href="/the-quick-brown-fox-jumps-over-the-lazy-dog/assets/three.min.js" as="script">
+<style>
+/* Self-hosted latin subsets of the Google Fonts (OFL). */
+@font-face{font-family:'DotGothic16';font-style:normal;font-weight:400;font-display:swap;src:url(/the-quick-brown-fox-jumps-over-the-lazy-dog/assets/fonts/dotgothic16-400.woff2) format('woff2')}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:400;font-display:swap;src:url(/the-quick-brown-fox-jumps-over-the-lazy-dog/assets/fonts/ibm-plex-mono-400.woff2) format('woff2')}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:500;font-display:swap;src:url(/the-quick-brown-fox-jumps-over-the-lazy-dog/assets/fonts/ibm-plex-mono-500.woff2) format('woff2')}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:600;font-display:swap;src:url(/the-quick-brown-fox-jumps-over-the-lazy-dog/assets/fonts/ibm-plex-mono-600.woff2) format('woff2')}
+@font-face{font-family:'Press Start 2P';font-style:normal;font-weight:400;font-display:swap;src:url(/the-quick-brown-fox-jumps-over-the-lazy-dog/assets/fonts/press-start-2p-400.woff2) format('woff2')}
+</style>
+<style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style>
+<style>
+/* Layout: console-grey page, ridged header, then a CRT set — dark cabinet, 4:3 tube with on-screen display, and a chin with speaker grille and the set's own push buttons. Single light theme on purpose: the page is the hardware. */
+:root{
+  --plastic:#cacac6;
+  --plastic-hi:#dbdbd7;
+  --plastic-lo:#a8a8a3;
+  --ink:#24252a;
+  --ink-soft:#585a5f;
+  --cabinet:#1d1e22;
+  --cabinet-lo:#0d0e10;
+  --btn:#2a2b30;
+  --btn-hi:#3b3c42;
+  --silk:#a3a5ab;
+  --led:#46d45f;
+  --led-dim:#34372f;
+  --osd:#7dff6e;
+  --hud-on:#ffe27a;
+  --hud-off:#dfe2dc;
+  --f-hud:"Press Start 2P", ui-monospace, Menlo, monospace;
+  --f-ui:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --f-head:"DotGothic16", "MS Gothic", ui-monospace, monospace;
+  color-scheme: light;
+}
+html,body{background:var(--plastic);color:var(--ink)}
+body{
+  font-family:var(--f-ui);font-size:14px;line-height:1.5;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap{max-width:980px;margin:0 auto;padding-block:28px 44px;display:grid;gap:18px}
+header{display:grid;gap:10px}
+.toprow{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+h1{font-family:var(--f-head);font-weight:400;font-size:clamp(26px,4.9vw,48px);line-height:1.25;letter-spacing:0;-webkit-font-smoothing:none;font-smooth:never;margin:0;text-wrap:balance;min-width:0}
+.info{position:relative;flex:none;margin-top:.4em}
+.info-btn{appearance:none;width:26px;height:26px;border-radius:50%;border:1.5px solid var(--ink-soft);background:transparent;color:var(--ink-soft);font:400 15px/1 var(--f-head);cursor:help;padding:0;display:grid;place-items:center}
+.info-btn:hover,.info-btn:focus-visible{border-color:var(--ink);color:var(--ink)}
+.info-btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.info-pop{position:absolute;right:0;top:calc(100% + 10px);z-index:5;width:min(340px,calc(100vw - 32px));background:var(--plastic-hi);border:1px solid var(--plastic-lo);border-radius:10px;padding:14px 16px;box-shadow:0 12px 28px -12px rgba(0,0,0,.35);font-size:12px;color:var(--ink-soft);display:grid;gap:12px;visibility:hidden;opacity:0;transform:translateY(-4px);transition:opacity .12s,transform .12s,visibility .12s}
+.info:hover .info-pop,.info:focus-within .info-pop{visibility:visible;opacity:1;transform:none}
+.info-pop p{margin:0;line-height:1.5}
+.ridges{height:12px;background:repeating-linear-gradient(to bottom,var(--plastic-lo) 0 1px,var(--plastic-hi) 1px 2px,transparent 2px 4px)}
+
+.tv{background:linear-gradient(var(--btn-hi) -40%,var(--cabinet) 18%);border-radius:18px;padding:clamp(10px,2.2vw,22px);padding-bottom:clamp(10px,1.6vw,16px);box-shadow:inset 0 2px 0 rgba(255,255,255,.07),0 2px 0 var(--plastic-lo),0 10px 24px -14px rgba(0,0,0,.6);display:grid;gap:clamp(10px,1.6vw,16px)}
+.tube{position:relative;border-radius:8px;overflow:hidden;background:#000;box-shadow:0 0 0 3px var(--cabinet-lo)}
+canvas{display:block;width:100%;max-width:100%;aspect-ratio:4/3;height:auto;image-rendering:pixelated;image-rendering:crisp-edges}
+.hud{position:absolute;left:0;right:0;bottom:5%;text-align:center;font-family:var(--f-hud);font-size:clamp(6px,1.7vw,15px);line-height:1.7;padding:0 4%;pointer-events:none;text-shadow:2px 2px 0 #000}
+.hud span{color:var(--hud-off);opacity:.5}
+.hud span.on{color:var(--hud-on);opacity:1}
+.osd{position:absolute;top:6%;left:5%;font-family:var(--f-hud);font-size:clamp(7px,2vw,17px);line-height:1.6;color:var(--osd);text-shadow:2px 2px 0 #000;pointer-events:none;white-space:pre;letter-spacing:.04em}
+
+.chin{display:flex;flex-wrap:wrap;align-items:center;gap:14px 22px}
+.grille{flex:1 1 90px;min-width:70px;height:28px;border-radius:4px;background:repeating-linear-gradient(90deg,var(--cabinet-lo) 0 3px,transparent 3px 7px)}
+.panel{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 18px}
+.ctl{display:flex;flex-direction:column;align-items:center;gap:6px}
+.sk{font-size:9px;letter-spacing:.16em;color:var(--silk);display:flex;align-items:center;gap:5px;white-space:nowrap;text-transform:uppercase;line-height:1}
+.led{width:6px;height:6px;border-radius:50%;background:var(--led-dim);flex:none}
+.led.on{background:var(--led);box-shadow:0 0 6px var(--led)}
+.sep{width:1px;align-self:stretch;background:var(--cabinet-lo);box-shadow:1px 0 0 rgba(255,255,255,.05)}
+.tv-btn{appearance:none;width:40px;height:18px;padding:0;border-radius:9px;border:1px solid var(--cabinet-lo);background:linear-gradient(var(--btn-hi),var(--btn));box-shadow:0 2px 0 var(--cabinet-lo),inset 0 1px 0 rgba(255,255,255,.08);color:var(--silk);font:600 9px/1 var(--f-ui);cursor:pointer;transition:transform .05s,box-shadow .05s;position:relative}
+.tv-btn::after{content:"";position:absolute;inset:-10px -4px}
+.tv-btn:active,.tv-btn.down{transform:translateY(2px);box-shadow:0 0 0 var(--cabinet-lo),inset 0 1px 2px rgba(0,0,0,.4)}
+.tv-btn:focus-visible{outline:2px solid var(--silk);outline-offset:3px}
+.pair{display:flex;gap:5px}
+.pair .tv-btn{width:26px}
+.power .tv-btn{width:26px;height:26px;border-radius:50%}
+
+.legend{display:grid;gap:6px;margin:0}
+.legend div{display:flex;gap:8px;min-width:0}
+.legend dt{font-weight:600;color:var(--ink);letter-spacing:.08em;flex:none;width:6.5ch}
+.legend dd{margin:0}
+@media (prefers-reduced-motion: reduce){.tv-btn,.info-pop{transition:none}}
+</style>
+</head>
+<body>
+
+<main class="wrap">
+  <header>
+    <div class="toprow">
+      <h1>The quick brown fox jumps over the lazy dog</h1>
+      <div class="info">
+        <button class="info-btn" id="info-btn" aria-label="About this scene" aria-describedby="info-pop">i</button>
+        <div class="info-pop" id="info-pop" role="tooltip">
+          <dl class="legend">
+            <div><dt>JITTER</dt><dd>No subpixel precision, so vertices snap to whole pixels.</dd></div>
+            <div><dt>WARP</dt><dd>No perspective correction, so textures bend on big polygons.</dd></div>
+            <div><dt>DITHER</dt><dd>15-bit color smoothed with a 4×4 Bayer pattern.</dd></div>
+            <div><dt>MODE</dt><dd>Switches between 320×240 and 640×480.</dd></div>
+          </dl>
+          <p>Everything is built in code: boxes, five-sided cylinders and four-sided cones, with 16-pixel procedural textures and per-vertex lighting.</p>
+        </div>
+      </div>
+    </div>
+    <div class="ridges" aria-hidden="true"></div>
+  </header>
+
+  <div class="tv">
+    <div class="tube">
+      <canvas id="c" width="320" height="240" aria-label="Low-poly forest clearing: a brown fox leaps over a sleeping dog"></canvas>
+      <div class="osd" id="osd" aria-live="polite"></div>
+      <div class="hud" aria-hidden="true"><span data-g="0">THE QUICK BROWN FOX</span> <span data-g="1">JUMPS OVER</span> <span data-g="2">THE LAZY DOG</span></div>
+    </div>
+    <div class="chin">
+      <div class="grille" aria-hidden="true"></div>
+      <div class="panel">
+        <div class="ctl"><span class="sk">Channel</span><div class="pair"><button class="tv-btn" id="ch-down" aria-label="Previous camera">▼</button><button class="tv-btn" id="ch-up" aria-label="Next camera">▲</button></div></div>
+        <span class="sep" aria-hidden="true"></span>
+        <div class="ctl"><span class="sk"><i class="led on"></i>Jitter</span><button class="tv-btn" data-sw="snap" id="sw-snap" aria-pressed="true" aria-label="Vertex jitter"></button></div>
+        <div class="ctl"><span class="sk"><i class="led on"></i>Warp</span><button class="tv-btn" data-sw="affine" id="sw-affine" aria-pressed="true" aria-label="Affine texture warp"></button></div>
+        <div class="ctl"><span class="sk"><i class="led on"></i>Dither</span><button class="tv-btn" data-sw="dither" id="sw-dither" aria-pressed="true" aria-label="Ordered dither"></button></div>
+        <div class="ctl"><span class="sk"><i class="led on"></i>30 fps</span><button class="tv-btn" data-sw="fps" id="sw-fps" aria-pressed="true" aria-label="30 fps cap"></button></div>
+        <span class="sep" aria-hidden="true"></span>
+        <div class="ctl"><span class="sk">Mode</span><button class="tv-btn" id="mode" aria-label="Switch resolution"></button></div>
+        <div class="ctl"><span class="sk">Pause</span><button class="tv-btn" id="pause" aria-pressed="false" aria-label="Pause"></button></div>
+        <div class="ctl power"><span class="sk"><i class="led on"></i>Power</span><button class="tv-btn" id="power" aria-label="Power"></button></div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script src="/the-quick-brown-fox-jumps-over-the-lazy-dog/assets/three.min.js"></script>
+<script>
+(function(){
+const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const R = mulberry32(1995);
+
+/* ---------- textures ---------- */
+function makeTex(size, fn){
+  const c=document.createElement('canvas'); c.width=c.height=size;
+  const ctx=c.getContext('2d'); const img=ctx.createImageData(size,size);
+  for(let y=0;y<size;y++)for(let x=0;x<size;x++){
+    const p=fn(x,y,size); const i=(y*size+x)*4;
+    img.data[i]=p[0];img.data[i+1]=p[1];img.data[i+2]=p[2];img.data[i+3]=p.length>3?p[3]:255;
+  }
+  ctx.putImageData(img,0,0);
+  const t=new THREE.CanvasTexture(c);
+  t.magFilter=t.minFilter=THREE.NearestFilter; t.generateMipmaps=false;
+  t.wrapS=t.wrapT=THREE.RepeatWrapping; return t;
+}
+const cl=v=>Math.max(0,Math.min(255,v|0));
+function jit(b,a){const k=(R()*2-1)*a;return [cl(b[0]+k),cl(b[1]+k),cl(b[2]+k*0.8)]}
+function noiseTex(base,amt,size=16){return makeTex(size,()=>jit(base,amt))}
+
+const T={};
+T.white = makeTex(4,()=>[255,255,255]);
+T.grass = makeTex(32,()=>{const r=R(); if(r<0.012)return [222,208,118]; if(r<0.16)return jit([58,88,40],10); return jit([84,118,52],16)});
+T.dirt  = makeTex(32,(x,y,s)=>{const e=Math.min(y,s-1-y); let a=255; if(e<4&&R()>e/4)a=0; if(R()<0.05)return [150,140,120,a]; const c=jit([124,96,64],14); c.push(a); return c;});
+const barkCols=[...Array(16)].map(()=>R()*24-12);
+T.bark  = makeTex(16,(x)=>jit([92+barkCols[x],64+barkCols[x]*0.7,42],8));
+T.pine  = noiseTex([42,80,50],12);
+T.leaf  = makeTex(16,()=>R()<0.2?jit([110,148,62],10):jit([72,112,48],12));
+T.fox   = makeTex(16,(x,y)=>((x+y*3)%7===0)?jit([168,78,30],8):jit([200,98,38],12));
+T.cream = noiseTex([236,222,196],8,8);
+T.dark  = noiseTex([52,34,26],8,8);
+T.black = noiseTex([20,16,14],4,4);
+T.tan   = makeTex(16,(x,y)=>((x*2+y)%9===0)?jit([156,104,56],8):jit([182,128,70],12));
+T.brown = noiseTex([102,64,36],10);
+T.rock  = noiseTex([118,120,114],18);
+T.red   = makeTex(8,(x,y)=>((x%4===1&&y%4===1)?[240,232,220]:jit([178,42,34],10)));
+T.tuft  = makeTex(16,(()=>{const h=[...Array(16)].map((_,i)=> (i%2===0)? 6+(R()*10|0) : 0);
+  return (x,y,s)=>{const fromBottom=s-1-y; return (h[x]>fromBottom)?jit(fromBottom>h[x]-3?[110,150,60]:[70,108,46],10).concat(255):[0,0,0,0]}})());
+const ZP=["11111111","00000011","00000110","00001100","00011000","00110000","01100000","11111111"];
+T.z = makeTex(8,(x,y)=>ZP[y][x]==='1'?[250,250,240,255]:[0,0,0,0]);
+T.blob = makeTex(16,(x,y)=>{const dx=x-7.5,dy=y-7.5;return (dx*dx+dy*dy<56)?[255,255,255,255]:[0,0,0,0]});
+
+/* ---------- PS1 material ---------- */
+const FOG = new THREE.Color(0.47,0.57,0.52);
+const U = {
+  uRes:{value:new THREE.Vector2(320,240)}, uSnap:{value:1}, uAffine:{value:1},
+  uLightDir:{value:new THREE.Vector3(-0.55,0.8,0.35).normalize()},
+  uLightCol:{value:new THREE.Color(0.95,0.8,0.58)},
+  uSky:{value:new THREE.Color(0.44,0.52,0.56)}, uGround:{value:new THREE.Color(0.22,0.2,0.14)},
+  uFogCol:{value:FOG}, uFogNear:{value:7}, uFogFar:{value:29}
+};
+const VS = `
+uniform vec2 uRes; uniform float uSnap; uniform vec2 uRepeat;
+uniform vec3 uLightDir; uniform vec3 uLightCol; uniform vec3 uSky; uniform vec3 uGround; uniform float uUnlit;
+uniform float uFogNear; uniform float uFogFar;
+varying vec3 vUvw; varying vec2 vUv; varying vec3 vLight; varying float vFog; varying vec3 vTint;
+void main(){
+  vec4 lp=vec4(position,1.0); vec3 ln=normal; vTint=vec3(1.0);
+  #ifdef USE_INSTANCING
+    lp=instanceMatrix*lp;
+    ln=mat3(instanceMatrix[0].xyz,instanceMatrix[1].xyz,instanceMatrix[2].xyz)*ln;
+  #endif
+  #ifdef USE_INSTANCING_COLOR
+    vTint=instanceColor;
+  #endif
+  vec4 wp=modelMatrix*lp;
+  vec3 wn=normalize(mat3(modelMatrix[0].xyz,modelMatrix[1].xyz,modelMatrix[2].xyz)*ln);
+  vec4 mv=viewMatrix*wp;
+  vec4 p=projectionMatrix*mv;
+  if(uSnap>0.5){ vec2 g=uRes*0.5; p.xy=floor(p.xy/p.w*g+0.5)/g*p.w; }
+  gl_Position=p;
+  float d=max(dot(wn,uLightDir),0.0);
+  vec3 hemi=mix(uGround,uSky,wn.y*0.5+0.5);
+  vLight=mix(hemi+uLightCol*d, vec3(1.0), uUnlit);
+  vec2 tuv=uv*uRepeat; vUv=tuv; vUvw=vec3(tuv*p.w,p.w);
+  vFog=smoothstep(uFogNear,uFogFar,-mv.z);
+}`;
+const FS = `
+uniform sampler2D uMap; uniform vec3 uColor; uniform vec3 uFogCol; uniform float uAlphaTest; uniform float uAffine;
+varying vec3 vUvw; varying vec2 vUv; varying vec3 vLight; varying float vFog; varying vec3 vTint;
+void main(){
+  vec2 uv = uAffine>0.5 ? vUvw.xy/vUvw.z : vUv;
+  vec4 t=texture2D(uMap,uv);
+  if(t.a<uAlphaTest) discard;
+  vec3 c=t.rgb*uColor*vTint*vLight;
+  c=mix(c,uFogCol,vFog);
+  gl_FragColor=vec4(c,1.0);
+}`;
+function M(map,o={}){
+  const m=new THREE.ShaderMaterial({
+    uniforms:Object.assign({},U,{
+      uMap:{value:map||T.white}, uColor:{value:new THREE.Color(o.color!==undefined?o.color:0xffffff)},
+      uRepeat:{value:new THREE.Vector2(...(o.repeat||[1,1]))}, uUnlit:{value:o.unlit?1:0},
+      uAlphaTest:{value:o.alphaTest||0}
+    }),
+    vertexShader:VS, fragmentShader:FS, side:o.side||THREE.FrontSide
+  });
+  if(o.offset){m.polygonOffset=true;m.polygonOffsetFactor=-1;m.polygonOffsetUnits=-o.offset}
+  return m;
+}
+const mat = {
+  fox:M(T.fox), cream:M(T.cream), dark:M(T.dark), black:M(T.black),
+  tan:M(T.tan), brown:M(T.brown), bark:M(T.bark), pine:M(T.pine), leaf:M(T.leaf), rock:M(T.rock),
+  red:M(T.red), stem:M(T.cream),
+  tuft:M(T.tuft,{alphaTest:0.5,side:THREE.DoubleSide}),
+  z:M(T.z,{alphaTest:0.5,unlit:true,side:THREE.DoubleSide}),
+  shadow:M(T.blob,{alphaTest:0.5,unlit:true,color:new THREE.Color(0.17,0.2,0.13),offset:8})
+};
+
+/* ---------- renderer ---------- */
+const canvas=document.getElementById('c');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:false,powerPreference:'low-power'});
+renderer.setPixelRatio(1);
+let W=320,H=240;
+renderer.setSize(W,H,false);
+const rt=new THREE.WebGLRenderTarget(W,H,{minFilter:THREE.NearestFilter,magFilter:THREE.NearestFilter});
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(52,4/3,0.1,80);
+
+const postMat=new THREE.ShaderMaterial({
+  uniforms:{tDiffuse:{value:rt.texture},uDither:{value:1}},
+  vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.0,1.0);}`,
+  fragmentShader:`uniform sampler2D tDiffuse;uniform float uDither;varying vec2 vUv;
+  float b2(vec2 a){a=floor(a);return fract(a.x/2.0+a.y*a.y*0.75);}
+  float b4(vec2 a){return b2(0.5*a)*0.25+b2(a);}
+  void main(){vec3 c=texture2D(tDiffuse,vUv).rgb;
+    if(uDither>0.5){c+=(b4(gl_FragCoord.xy)-0.5)/22.0;c=floor(clamp(c,0.0,1.0)*31.0+0.5)/31.0;}
+    gl_FragColor=vec4(c,1.0);}`,
+  depthTest:false,depthWrite:false
+});
+const postScene=new THREE.Scene();
+const postQuad=new THREE.Mesh(new THREE.PlaneGeometry(2,2),postMat); postQuad.frustumCulled=false; postScene.add(postQuad);
+const postCam=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+
+/* ---------- sky ---------- */
+const sky=new THREE.Mesh(new THREE.SphereGeometry(50,12,8),new THREE.ShaderMaterial({
+  uniforms:{uFog:{value:FOG},uTop:{value:new THREE.Color(0.74,0.8,0.74)},uSun:{value:U.uLightDir.value},uSunCol:{value:new THREE.Color(1.0,0.86,0.6)}},
+  vertexShader:`varying vec3 vD;void main(){vD=normalize(position);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+  fragmentShader:`uniform vec3 uFog;uniform vec3 uTop;uniform vec3 uSun;uniform vec3 uSunCol;varying vec3 vD;
+  void main(){vec3 d=normalize(vD);vec3 c=mix(uFog,uTop,smoothstep(0.0,0.55,d.y));
+  c+=uSunCol*pow(max(dot(d,uSun),0.0),18.0)*0.45;gl_FragColor=vec4(c,1.0);}`,
+  side:THREE.BackSide,depthWrite:false,depthTest:false
+}));
+sky.renderOrder=-10; sky.frustumCulled=false; scene.add(sky);
+
+/* ---------- ground ---------- */
+const sstep=(a,b,x)=>{const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*t*(3-2*t)};
+function groundH(x,z){const d=Math.hypot(x,z);return sstep(9,17,d)*sstep(2.6,5,Math.abs(z))*(Math.sin(x*0.3)*Math.cos(z*0.27)*0.8+Math.sin(x*0.11+z*0.17)*1.3+0.6)}
+const gGeo=new THREE.PlaneGeometry(90,90,45,45); gGeo.rotateX(-Math.PI/2);
+{const p=gGeo.attributes.position;for(let i=0;i<p.count;i++){p.setY(i,groundH(p.getX(i),p.getZ(i)))} gGeo.computeVertexNormals();}
+scene.add(new THREE.Mesh(gGeo,M(T.grass,{repeat:[45,45]})));
+const pGeo=new THREE.PlaneGeometry(70,2.3,35,1); pGeo.rotateX(-Math.PI/2);
+const path=new THREE.Mesh(pGeo,M(T.dirt,{repeat:[35,1],alphaTest:0.5,offset:4})); path.position.y=0.01; scene.add(path);
+
+/* ---------- forest ---------- */
+function inst(geo,m,list,fn){
+  const im=new THREE.InstancedMesh(geo,m,list.length); im.frustumCulled=false;
+  const o=new THREE.Object3D(), c=new THREE.Color();
+  list.forEach((it,i)=>{fn(it,o,c);o.updateMatrix();im.setMatrixAt(i,o.matrix);im.setColorAt(i,c)});
+  scene.add(im); return im;
+}
+const pines=[],oaks=[];
+for(let i=0;i<420;i++){
+  const r=6+R()*28, a=R()*Math.PI*2, x=Math.cos(a)*r, z=Math.sin(a)*r;
+  if(Math.abs(z)<2.7) continue;
+  if(z>0 && r<14 && Math.abs(x)<10) continue;
+  const t={x,z,y:groundH(x,z),s:0.85+R()*0.75,rot:R()*6.283,tint:0.8+R()*0.35};
+  (R()<0.66?pines:oaks).push(t);
+}
+const trunkGeo=new THREE.CylinderGeometry(0.13,0.2,1,5); trunkGeo.translate(0,0.5,0);
+inst(trunkGeo,mat.bark,pines.concat(oaks),(t,o,c)=>{const oak=oaks.includes(t);const h=(oak?2.0:1.5)*t.s;o.position.set(t.x,t.y-0.1,t.z);o.rotation.set(0,t.rot,0);o.scale.set(oak?1.4*t.s:t.s,h,oak?1.4*t.s:t.s);c.setScalar(t.tint)});
+const coneGeo=new THREE.ConeGeometry(1,1.5,6);
+for(let k=0;k<3;k++){
+  inst(coneGeo,mat.pine,pines,(t,o,c)=>{const rr=(1.3-k*0.34)*t.s;o.position.set(t.x,t.y+1.5*t.s+0.75*t.s+k*0.85*t.s,t.z);o.rotation.set(0,t.rot+k,0);o.scale.set(rr,t.s,rr);c.setRGB(t.tint*0.95,t.tint,t.tint*0.95)});
+}
+const blobGeo=new THREE.IcosahedronGeometry(1,0);
+inst(blobGeo,mat.leaf,oaks,(t,o,c)=>{o.position.set(t.x,t.y+2.9*t.s,t.z);o.rotation.set(t.rot,t.rot*2,0);o.scale.set(1.45*t.s,1.15*t.s,1.45*t.s);c.setRGB(t.tint,t.tint,t.tint*0.9)});
+inst(blobGeo,mat.leaf,oaks,(t,o,c)=>{o.position.set(t.x+0.6*t.s,t.y+3.6*t.s,t.z-0.3*t.s);o.rotation.set(t.rot*3,t.rot,0);o.scale.set(0.95*t.s,0.85*t.s,0.95*t.s);c.setRGB(t.tint*1.08,t.tint*1.08,t.tint)});
+
+const rocks=[];for(let i=0;i<26;i++){const r=4+R()*20,a=R()*6.283,x=Math.cos(a)*r,z=Math.sin(a)*r;if(Math.abs(z)<1.6||(z>2&&r<13&&Math.abs(x)<8))continue;rocks.push({x,z,y:groundH(x,z),s:0.2+R()*0.55,r:R()*6})}
+inst(new THREE.DodecahedronGeometry(1,0),mat.rock,rocks,(t,o,c)=>{o.position.set(t.x,t.y+t.s*0.25,t.z);o.rotation.set(t.r,t.r*1.7,t.r*0.3);o.scale.set(t.s*1.3,t.s*0.75,t.s);c.setScalar(0.85+R()*0.25)});
+
+function crossQuad(w,h){
+  const pos=[],uv=[],nor=[],idx=[];
+  for(let k=0;k<2;k++){const a=k*Math.PI/2,dx=Math.cos(a)*w/2,dz=Math.sin(a)*w/2,b=k*4;
+    pos.push(-dx,0,-dz, dx,0,dz, dx,h,dz, -dx,h,-dz); uv.push(0,0,1,0,1,1,0,1);
+    for(let i=0;i<4;i++)nor.push(0,1,0); idx.push(b,b+1,b+2,b,b+2,b+3);}
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
+  g.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3));
+  g.setIndex(idx); return g;
+}
+const tufts=[];for(let i=0;i<340;i++){const r=1.5+R()*22,a=R()*6.283,x=Math.cos(a)*r,z=Math.sin(a)*r;if(Math.abs(z)<1.3)continue;if(Math.abs(x)<1.2&&Math.abs(z)<1.8)continue;tufts.push({x,z,y:groundH(x,z),s:0.7+R()*0.8,r:R()*6})}
+inst(crossQuad(0.6,0.45),mat.tuft,tufts,(t,o,c)=>{o.position.set(t.x,t.y,t.z);o.rotation.set(0,t.r,0);o.scale.setScalar(t.s);c.setScalar(0.85+R()*0.3)});
+
+[[-2.6,-2.4],[-2.2,-2.9],[3.3,2.6],[3.0,3.1],[5.2,-2.2]].forEach(([x,z],i)=>{
+  const s=0.8+(i%3)*0.25;
+  const stem=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.05,0.16,4),mat.stem);stem.position.set(x,0.08*s,z);stem.scale.setScalar(s);scene.add(stem);
+  const cap=new THREE.Mesh(new THREE.ConeGeometry(0.13,0.1,6),mat.red);cap.position.set(x,0.19*s,z);cap.scale.setScalar(s);scene.add(cap);
+});
+
+/* ---------- helpers ---------- */
+function box(w,h,d,m,x,y,z,parent){const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);b.position.set(x,y,z);parent.add(b);return b}
+function cone(r,h,seg,m,parent){const c=new THREE.Mesh(new THREE.ConeGeometry(r,h,seg),m);parent.add(c);return c}
+
+/* ---------- fox ---------- */
+const fox=new THREE.Group(); scene.add(fox);
+const foxPivot=new THREE.Group(); foxPivot.position.y=0.6; fox.add(foxPivot);
+const F=new THREE.Group(); F.position.y=-0.6; foxPivot.add(F);
+{
+  const torso=new THREE.Mesh(new THREE.CylinderGeometry(0.21,0.16,0.95,5),mat.fox);torso.rotation.z=-Math.PI/2;torso.position.set(0,0.62,0);F.add(torso);
+  box(0.26,0.24,0.26,mat.cream,0.36,0.55,0,F);
+}
+const foxHead=new THREE.Group(); foxHead.position.set(0.52,0.84,0); F.add(foxHead);
+{
+  box(0.3,0.26,0.3,mat.fox,0,0,0,foxHead);
+  box(0.2,0.1,0.32,mat.cream,0.05,-0.1,0,foxHead);
+  const sn=cone(0.1,0.28,4,mat.fox,foxHead);sn.rotation.set(Math.PI/4,0,-Math.PI/2);sn.position.set(0.28,-0.05,0);
+  box(0.05,0.05,0.06,mat.black,0.43,-0.05,0,foxHead);
+  box(0.03,0.045,0.04,mat.black,0.15,0.04,0.12,foxHead);
+  box(0.03,0.045,0.04,mat.black,0.15,0.04,-0.12,foxHead);
+  [0.09,-0.09].forEach(z=>{const e=cone(0.08,0.2,4,mat.fox,foxHead);e.position.set(-0.03,0.2,z);const tp=cone(0.03,0.08,4,mat.black,foxHead);tp.position.set(-0.03,0.265,z)});
+}
+const foxTail=new THREE.Group(); foxTail.position.set(-0.46,0.68,0); F.add(foxTail);
+{
+  const a=cone(0.16,0.7,5,mat.fox,foxTail);a.rotation.z=-Math.PI/2;a.position.x=-0.3;
+  const b=cone(0.12,0.3,5,mat.cream,foxTail);b.rotation.z=Math.PI/2;b.position.x=-0.8;
+}
+const foxLegs=[];
+[[0.3,0.11,0],[0.3,-0.11,0.35],[-0.32,0.11,Math.PI],[-0.32,-0.11,Math.PI+0.35]].forEach(([x,z,ph])=>{
+  const g=new THREE.Group();g.position.set(x,0.52,z);F.add(g);
+  box(0.12,0.2,0.12,mat.fox,0,-0.08,0,g);
+  box(0.09,0.5,0.09,mat.dark,0,-0.25,0,g);
+  foxLegs.push({g,ph,front:x>0});
+});
+const foxShadow=new THREE.Mesh(new THREE.PlaneGeometry(1.1,0.5),mat.shadow);foxShadow.rotation.x=-Math.PI/2;foxShadow.position.y=0.03;scene.add(foxShadow);
+
+/* ---------- dog ---------- */
+const dog=new THREE.Group(); scene.add(dog);
+const dogBody=new THREE.Mesh(new THREE.CylinderGeometry(0.31,0.28,1.2,6),mat.tan);
+dogBody.rotation.x=Math.PI/2; dogBody.position.set(0,0.27,0); dog.add(dogBody);
+box(0.2,0.28,0.46,mat.tan,0.25,0.15,-0.32,dog);
+box(0.13,0.08,0.3,mat.cream,0.3,0.04,-0.06,dog);
+box(0.12,0.1,0.42,mat.cream,0.13,0.05,0.88,dog);
+box(0.12,0.1,0.42,mat.cream,-0.13,0.05,0.88,dog);
+const dogHead=new THREE.Group(); dogHead.position.set(0,0.25,0.8); dogHead.rotation.z=0.14; dog.add(dogHead);
+{
+  box(0.38,0.3,0.36,mat.tan,0,0,0,dogHead);
+  box(0.24,0.17,0.24,mat.cream,0,-0.05,0.27,dogHead);
+  box(0.09,0.06,0.04,mat.black,0,0.02,0.4,dogHead);
+  box(0.09,0.016,0.02,mat.black,0.1,0.05,0.185,dogHead);
+  box(0.09,0.016,0.02,mat.black,-0.1,0.05,0.185,dogHead);
+}
+const dogEars=[1,-1].map(s=>{const g=new THREE.Group();g.position.set(0.2*s,0.1,0);dogHead.add(g);box(0.06,0.34,0.2,mat.brown,0.02*s,-0.16,0,g);g.rotation.z=0.12*s;return {g,s}});
+const dogTail=new THREE.Group(); dogTail.position.set(-0.08,0.07,-0.6); dogTail.rotation.y=0.7; dog.add(dogTail);
+{const t=cone(0.06,0.45,5,mat.tan,dogTail);t.rotation.x=-Math.PI/2;t.position.z=-0.22;}
+const dogShadow=new THREE.Mesh(new THREE.PlaneGeometry(1.0,1.9),mat.shadow);dogShadow.rotation.x=-Math.PI/2;dogShadow.position.set(0.02,0.025,0.2);scene.add(dogShadow);
+
+const zs=[0,1,2].map(i=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(0.2,0.2),mat.z);scene.add(m);return m});
+
+/* ---------- animation ---------- */
+const LOOP=4.4, SPAN=24, JL=2.4, JH=1.45;
+let time=reduce?LOOP*0.5:0, wall=0, acc=0, paused=reduce, camMode='drift', cap30=true, lastG=-1;
+const hudSpans=[...document.querySelectorAll('.hud span')];
+const look=new THREE.Vector3(), headW=new THREE.Vector3();
+
+function update(t){
+  const ph=(t%LOOP)/LOOP, x=-SPAN/2+SPAN*ph;
+  let y=0,slope=0,air=0;
+  if(Math.abs(x)<JL){const u=x/JL;y=JH*(1-u*u);slope=-2*JH*x/(JL*JL);air=1-Math.pow(Math.abs(u),6)}
+  const stride=x*2.4;
+  fox.position.set(x,y,0);
+  foxPivot.rotation.z=Math.atan(slope)*0.75;
+  F.position.y=-0.6+(air<0.5?Math.abs(Math.sin(stride))*0.05:0);
+  foxLegs.forEach(l=>{const run=Math.sin(stride+l.ph)*0.75;const ext=l.front?1.15:-1.2;l.g.rotation.z=run*(1-air)+ext*air});
+  foxTail.rotation.z=0.25+Math.sin(stride*0.5)*0.12-air*0.2;
+  foxTail.rotation.y=Math.sin(t*3)*0.15;
+  foxHead.rotation.z=-foxPivot.rotation.z*0.4;
+  foxShadow.position.x=x; const ss=1-y/(JH*1.6); foxShadow.scale.set(ss,ss,1);
+
+  const breath=Math.sin(t*1.6)*0.035;
+  dogBody.scale.set(1+breath,1,0.82*(1+breath));
+  dogHead.position.y=0.25+breath*0.4;
+  const perk=Math.abs(x)<1.6?1:0;
+  dogEars.forEach(e=>{e.g.rotation.z=(0.12+perk*0.35+Math.max(0,Math.sin(t*0.7+e.s))*0.04)*e.s});
+  dogTail.rotation.y=0.7+Math.sin(t*0.9)*0.08;
+
+  dogHead.getWorldPosition(headW);
+  zs.forEach((m,i)=>{const s=((t*0.32+i/3)%1);m.position.set(headW.x+0.12+s*0.5,headW.y+0.25+s*1.05,headW.z+0.1+Math.sin(s*6.28+i)*0.12);const k=0.5+s*1.1;m.scale.setScalar(k);m.visible=s<0.88;m.quaternion.copy(camera.quaternion)});
+
+  if(camMode==='drift'){const a=Math.PI/2+Math.sin(t*0.13)*0.9,r=8.2;camera.position.set(Math.cos(a)*r,1.8+Math.sin(t*0.21)*0.35,Math.sin(a)*r);look.set(0,0.75,0)}
+  else if(camMode==='side'){camera.position.set(0,1.05,7.2);look.set(0,0.8,0)}
+  else{camera.position.set(x-3.3,1.5+y*0.5,1.5);look.set(x+2,0.5+y*0.6,0)}
+  camera.lookAt(look);
+  sky.position.copy(camera.position);
+
+  const g=x<-JL?0:(x<=JL?1:2);
+  if(g!==lastG){hudSpans.forEach((s,i)=>s.classList.toggle('on',i===g));lastG=g}
+}
+function render(){
+  renderer.setRenderTarget(rt); renderer.setClearColor(FOG); renderer.render(scene,camera);
+  renderer.setRenderTarget(null); renderer.render(postScene,postCam);
+}
+let prev=performance.now();
+function frame(now){
+  const dt=Math.min(0.1,(now-prev)/1000); prev=now;
+  if(!paused) time+=dt;
+  acc+=dt; const step=cap30?1/30:0;
+  if(acc>=step){acc=cap30?acc%step:0; update(time); render();}
+  requestAnimationFrame(frame);
+}
+update(time); render();
+requestAnimationFrame(frame);
+
+/* ---------- TV controls ---------- */
+const osdEl=document.getElementById('osd'); let osdTimer=0;
+function osd(msg,ms=2000){clearTimeout(osdTimer);osdEl.textContent=msg;osdTimer=setTimeout(()=>{osdEl.textContent=paused?'PAUSE':''},ms)}
+const cams=['drift','side','chase'],camNames=['DRIFT','SIDE','CHASE']; let ch=0;
+function setCh(n){ch=(n+3)%3;camMode=cams[ch];osd(`CH ${ch+1}  ${camNames[ch]}`);update(time);render()}
+document.getElementById('ch-up').addEventListener('click',()=>setCh(ch+1));
+document.getElementById('ch-down').addEventListener('click',()=>setCh(ch-1));
+
+const pauseBtn=document.getElementById('pause');
+pauseBtn.addEventListener('click',()=>{paused=!paused;pauseBtn.setAttribute('aria-pressed',String(paused));osd(paused?'PAUSE':'PLAY',paused?1e9:1200)});
+
+function syncSpec(){}
+document.getElementById('mode').addEventListener('click',()=>{
+  H=H===240?480:240; W=H*4/3;
+  renderer.setSize(W,H,false); rt.setSize(W,H); U.uRes.value.set(W,H);
+  osd(`MODE ${H}P`); syncSpec(); render();
+});
+const swNames={snap:'JITTER',affine:'WARP',dither:'DITHER',fps:'30 FPS'};
+document.querySelectorAll('[data-sw]').forEach(b=>b.addEventListener('click',()=>{
+  const on=b.getAttribute('aria-pressed')!=='true'; b.setAttribute('aria-pressed',String(on));
+  b.parentElement.querySelector('.led').classList.toggle('on',on);
+  const k=b.dataset.sw;
+  if(k==='snap')U.uSnap.value=on?1:0;
+  if(k==='affine')U.uAffine.value=on?1:0;
+  if(k==='dither')postMat.uniforms.uDither.value=on?1:0;
+  if(k==='fps')cap30=on;
+  osd(`${swNames[k]} ${on?'ON':'OFF'}`); syncSpec(); render();
+}));
+const tube=document.querySelector('.tube');
+document.getElementById('info-btn').addEventListener('click',e=>e.currentTarget.focus());
+document.getElementById('power').addEventListener('click',()=>{
+  setCh(0); osd(`CH 1  DRIFT`,2400);
+  if(!reduce && tube.animate) tube.animate([{filter:'brightness(3) contrast(.4)',transform:'scaleY(.02)'},{filter:'brightness(1.6)',transform:'scaleY(1)',offset:.55},{filter:'none',transform:'scaleY(1)'}],{duration:420,easing:'ease-out'});
+});
+osd(paused?'PAUSE':'CH 1  DRIFT',paused?1e9:2600);
+if(paused)pauseBtn.setAttribute('aria-pressed','true');
+})();
+</script>
+
+</body>
+</html>
