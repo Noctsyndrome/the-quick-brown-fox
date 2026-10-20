@@ -85,6 +85,16 @@ canvas{display:block;width:100%;max-width:100%;aspect-ratio:4/3;height:auto;imag
 .legend div{display:flex;gap:8px;min-width:0}
 .legend dt{font-weight:600;color:var(--ink);letter-spacing:.08em;flex:none;width:6.5ch}
 .legend dd{margin:0}
+
+/* Bridge the gap under the i button so the pointer can reach the links without the popover closing. */
+.info-pop::before{content:"";position:absolute;left:0;right:0;bottom:100%;height:12px}
+.colophon{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding-top:12px;border-top:1px solid var(--plastic-lo);letter-spacing:.025em}
+.colophon a{color:var(--ink)}
+.colophon .brewing{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:.25em}
+.colophon .brewing:hover{text-decoration-thickness:2px;background:var(--hud-on)}
+.colophon .source{text-decoration:none;white-space:nowrap}
+.colophon .source:hover{text-decoration:underline;text-underline-offset:.25em}
+.colophon a:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 @media (prefers-reduced-motion: reduce){.tv-btn,.info-pop{transition:none}}
 </style>
 </head>
@@ -104,6 +114,10 @@ canvas{display:block;width:100%;max-width:100%;aspect-ratio:4/3;height:auto;imag
             <div><dt>MODE</dt><dd>Switches between 320×240 and 640×480.</dd></div>
           </dl>
           <p>Everything is built in code: boxes, five-sided cylinders and four-sided cones, with 16-pixel procedural textures and per-vertex lighting.</p>
+          <div class="colophon">
+            <span>by <a class="brewing" href="https://www.denkibrew.com/"><span aria-hidden="true">🍺</span> Dennki Brewing</a></span>
+            <a class="source" href="https://github.com/Noctsyndrome/the-quick-brown-fox">GitHub <span aria-hidden="true">↗</span></a>
+          </div>
         </div>
       </div>
     </div>
