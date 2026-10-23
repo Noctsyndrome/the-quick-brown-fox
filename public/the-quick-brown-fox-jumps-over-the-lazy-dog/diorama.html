@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quick Brown Fox Pixel Diorama</title>
+<style>
+@font-face{font-family:'DotGothic16';font-style:normal;font-weight:400;font-display:swap;src:url(/the-quick-brown-fox-jumps-over-the-lazy-dog/assets/fonts/dotgothic16-400.woff2) format('woff2')}
+:root{--paper:#f4f1ea;--ink:#3f3a33;--dim:#c2baa9;--hi:#efc04a}
+html,body{margin:0;height:100%;background:var(--paper);color:var(--ink)}
+body{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(8px,2vh,20px);overflow:hidden;font-family:"DotGothic16","MS Gothic",ui-monospace,monospace}
+/* Sized by CSS so the first paint already matches; the script then snaps to whole pixels. */
+canvas{display:block;width:min(92vw,calc((100vh - 140px) * 1.6));height:auto;aspect-ratio:8/5;image-rendering:pixelated;image-rendering:crisp-edges}
+.line{margin:0;padding:0 16px;text-align:center;text-wrap:balance;font-size:clamp(16px,2.6vw,26px);line-height:1.3;-webkit-font-smoothing:none}
+.line span{color:var(--dim);transition:color .25s}
+.line span.on{color:var(--ink)}
+.back{position:fixed;top:16px;left:16px;box-sizing:border-box;width:26px;height:26px;display:grid;place-items:center;border:1.5px solid var(--dim);border-radius:50%;color:var(--ink);text-decoration:none;font-size:15px;line-height:1}
+.back:hover,.back:focus-visible{background:var(--hi);border-color:var(--ink);outline:none}
+@media (prefers-reduced-motion:reduce){.line span{transition:none}}
+</style>
+</head>
+<body>
+<a class="back" href="/the-quick-brown-fox-jumps-over-the-lazy-dog" aria-label="All versions">←</a>
+<canvas id="c" width="480" height="300" role="img" aria-label="A pixel-art forest diorama with a deer, ducks, a rabbit and a hedgehog. Near the middle, a quick brown fox jumps over a sleeping dog."></canvas>
+<p class="line"><span>The quick brown fox</span> <span>jumps over</span> <span>the lazy dog</span></p>
+<script>
+(() => {
+'use strict';
+const W = 480, H = 300;
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d');
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* Integer upscaling keeps every art pixel the same size. */
+function fit() {
+  const dpr = window.devicePixelRatio || 1;
+  const max = Math.min(innerWidth * 0.92, (innerHeight - 140) * W / H);
+  const snapped = W * Math.floor(max * dpr / W) / dpr;
+  // Whole-pixel scaling unless it would waste more than a fifth of the room (small phones).
+  cv.style.width = (snapped >= max * 0.8 ? snapped : max) + 'px';
+}
+addEventListener('resize', fit);
+fit();
+
+/* ---------- helpers ---------- */
+let seed = 1023;
+function rnd() {
+  seed = (seed + 0x6D2B79F5) | 0;
+  let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+  return ((t ^ t >>> 14) >>> 0) / 4294967296;
+}
+function hash(x, y) {
+  let h = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263);
+  h = Math.imul(h ^ h >>> 13, 1274126177);
+  return ((h ^ h >>> 16) >>> 0) / 4294967296;
+}
+function vnoise(x, y) {
+  const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
+  const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+  const a = hash(xi, yi), b = hash(xi + 1, yi), c = hash(xi, yi + 1), d = hash(xi + 1, yi + 1);
+  return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+}
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map(v => (v + 0.5) / 16);
+const bayer = (x, y) => BAYER[(y & 3) * 4 + (x & 3)];
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const col = hex => { const n = parseInt(hex.slice(1), 16); return (0xff000000 | (n & 255) << 16 | (n & 0xff00) | n >> 16) >>> 0; };
+function tint(c, fr, fg, fb) {
+  const r = c & 255, g = c >>> 8 & 255, b = c >>> 16 & 255;
+  return (0xff000000 | (b * fb | 0) << 16 | (g * fg | 0) << 8 | (r * fr | 0)) >>> 0;
+}
+const shade = c => tint(c, 0.68, 0.74, 0.84);
+const pick = (pal, lum) => pal[clamp(Math.floor(lum * pal.length), 0, pal.length - 1)];
+
+function fromFn(w, h, fn) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const g = c.getContext('2d'), id = g.createImageData(w, h), u = new Uint32Array(id.data.buffer);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const v = fn(x, y); if (v) u[y * w + x] = v; }
+  g.putImageData(id, 0, 0);
+  return c;
+}
+function fromRows(rows, pal) {
+  return fromFn(rows[0].length, rows.length, (x, y) => { const ch = rows[y][x]; return ch === '.' ? 0 : pal[ch]; });
+}
+/* [facing right, facing left] */
+const pair = (rows, pal) => [fromRows(rows, pal), fromRows(rows.map(r => [...r].reverse().join('')), pal)];
+
+/* ---------- palette ---------- */
+const P = {
+  paper: col('#f4f1ea'), table: col('#e6e0d3'),
+  grass: ['#6c9d46', '#7aab4e', '#88b856', '#98c461'].map(col),
+  rim: col('#aed277'), bank: col('#4f7a42'), reed: col('#41693a'),
+  water: ['#3d84a0', '#5aa3bd', '#8cc8d8', '#d4f0f4'].map(col),
+  lip: col('#5d8a3c'), topsoil: col('#6b4c33'), soil: col('#8c6a47'), band: col('#7a5b3d'), stone: col('#a98b68'), under: col('#5f4530'),
+  flowers: ['#fbf6ea', '#f2d14b', '#e98aa0', '#b9a6e8'].map(col),
+  pineA: ['#23503a', '#2f6544', '#3f7d4c', '#5a9a58'].map(col),
+  pineB: ['#244a42', '#2e5f50', '#3c7658', '#579063'].map(col),
+  round: ['#3d6f3a', '#4f8a44', '#6aa64f', '#8cc062'].map(col),
+  autumn: ['#a85a26', '#d18732', '#e9b048', '#f5d27a'].map(col),
+  bush: ['#3f7038', '#548c43', '#6ea652', '#8dbf63'].map(col),
+  rock: ['#7d7a72', '#9a978e', '#b5b2a8', '#cfcbc0'].map(col),
+  trunk: [col('#7b5638'), col('#5b3f29')],
+  berry: col('#c8453a')
+};
+
+/* ---------- the slab and where things live ---------- */
+const CX = 240, A = 200, TOP = 46, MID = TOP + A / 2, BOT = TOP + A, T = 12;
+const inTop = (x, y) => Math.abs(x + 0.5 - CX) / A + Math.abs(y + 0.5 - MID) / (A / 2) <= 1;
+const inTopM = (x, y, m) => Math.abs(x - CX) / (A - m) + Math.abs(y - MID) / ((A - m) / 2) <= 1;
+/* The fox's run: no trail on the ground, just a gap between the trees. */
+const laneY = x => MID + Math.round(4 * Math.sin((x - 40) * 0.021) + 2 * Math.sin(x * 0.057 + 1));
+const laneGap = x => 7 + vnoise(x * 0.06, 3) * 7;
+const streamX = y => 330 + Math.round(4 * Math.sin(y * 0.085) + 2 * Math.sin(y * 0.031 + 2));
+const DOGX = 214, DOGY = laneY(DOGX);
+const LOGX = streamX(laneY(330)), LOGY = laneY(LOGX);
+const POND = { x: 158, y: 116, rx: 20, ry: 9 };
+const DEER = { y: 120 }; DEER.x = streamX(DEER.y) - 7;
+const RABBIT = { x: 140, y: 178 };
+const HOG = { x: 296, y: 194 };
+const FISH = { y: 186 }; FISH.x = streamX(FISH.y);
+const ZONES = [[POND.x, POND.y, 32], [DEER.x + 6, DEER.y, 22], [RABBIT.x, RABBIT.y, 26], [HOG.x, HOG.y, 26]];
+const inZone = (x, y) => ZONES.some(([zx, zy, r]) => Math.hypot(x - zx, (y - zy) * 2) < r);
+const pondE = (x, y) => ((x + 0.5 - POND.x) / POND.rx) ** 2 + ((y + 0.5 - POND.y) / POND.ry) ** 2 + (vnoise(x * 0.2, y * 0.4) - 0.5) * 0.3;
+
+/* ---------- plants and props ---------- */
+function makePine(h, wv, pal) {
+  const w = wv * 2 + 3, c = w >> 1, Hc = h - 3, id = rnd() * 997 | 0;
+  return [0, 1].map(sw => fromFn(w + 1, h, (x, y) => {
+    if (y >= Hc) return x === c ? P.trunk[0] : x === c + 1 ? P.trunk[1] : 0;
+    const xx = x - (sw && y < Hc * 0.45 ? 1 : 0);
+    const t = (y + 1) / Hc, ti = Math.min(2, Math.floor(t * 3 - 1e-6)), k = t * 3 - ti;
+    const hw = wv * (0.3 + 0.7 * t) * (0.5 + 0.5 * k) + 0.5, dx = xx - c - 0.5;
+    if (Math.abs(dx) > hw) return 0;
+    if (Math.abs(dx) > hw - 1 && hash(x + id, y * 3 + id) < 0.3) return 0;
+    return pick(pal, 0.62 - dx / hw * 0.42 - (k > 0.8 ? 0.28 : 0) + (hash(x * 3 + id, y * 7) - 0.5) * 0.3 + (bayer(x, y) - 0.5) * 0.18);
+  }));
+}
+function makeRound(h, r, pal) {
+  const w = r * 2 + 3, c = r + 1, id = rnd() * 997 | 0;
+  return [0, 1].map(sw => fromFn(w + 1, h, (x, y) => {
+    const xx = x - (sw && y < r ? 1 : 0);
+    const dx = xx + 0.5 - c, dy = (y - r) * 1.12, d = Math.hypot(dx, dy);
+    const edge = r + (hash(x * 5 + id, y * 9 + id) - 0.5) * 1.6;
+    if (d <= edge) return pick(pal, 0.62 - (dx + dy) / (r * 2.4) + (hash(x * 13 + id, y * 3) - 0.5) * 0.35 + (bayer(x, y) - 0.5) * 0.18 - (d > edge - 1 && dx + dy > 0 ? 0.2 : 0));
+    if (y > r * 2 - 2 && (x === c - 1 || x === c)) return x === c - 1 ? P.trunk[0] : P.trunk[1];
+    return 0;
+  }));
+}
+function makeBush(r) {
+  const w = r * 2 + 2, h = Math.ceil(r * 1.5) + 1, cy = h - 1 - r * 0.55, id = rnd() * 997 | 0, berries = rnd() < 0.3;
+  return fromFn(w, h, (x, y) => {
+    const dx = (x + 0.5 - (r + 1)) / r, dy = (y + 0.5 - cy) / (r * 0.75);
+    if (Math.hypot(dx, dy) > 1 + (hash(x + id, y * 7) - 0.5) * 0.3 || y + 0.5 > h) return 0;
+    const lum = 0.6 - (dx + dy) * 0.3 + (hash(x * 11 + id, y * 5) - 0.5) * 0.35 + (bayer(x, y) - 0.5) * 0.15;
+    if (berries && lum > 0.45 && hash(x * 17 + id, y * 19) < 0.08) return P.berry;
+    return pick(P.bush, lum);
+  });
+}
+function makeRock(w, h) {
+  const id = rnd() * 997 | 0;
+  return fromFn(w, h, (x, y) => {
+    const dx = (x + 0.5 - w / 2) / (w / 2), dy = (y + 0.5 - h * 0.6) / (h * 0.6);
+    if (dx * dx + dy * dy > 1) return 0;
+    return pick(P.rock, 0.6 - (dx + dy) * 0.35 + (hash(x + id, y * 3) - 0.5) * 0.25);
+  });
+}
+const WOOD = { b: col('#7a5434'), B: col('#94673f'), d: col('#5f4029'), e: col('#c9a070'), m: col('#6ea652') };
+const MUSHROOM = fromRows(['RWR', 'rRr', '.S.'], { R: col('#c8452f'), r: col('#a53524'), W: col('#f3ece0'), S: col('#efe3c9') });
+const LOG = fromRows(['.bbmbbbbbb.', 'bBBBBBBBBBe', 'bBBBBBBBBBe', '.ddddddddd.'], WOOD);
+const LOG_LONG = fromRows(['.bbmmbbbbbmbbbb.', 'eBBBBBBBBBBBBBBe', 'bBBBBBBBBBBBBBBb', '.dddddddddddddd.'], WOOD);
+const CATTAIL = fromRows(['b', 'b', 'g', 'g', 'g'], { b: col('#6b4a2e'), g: col('#5d8a3c') });
+
+/* ---------- animals ---------- */
+const FOXPAL = { O: col('#d8742c'), o: col('#b4561d'), W: col('#f4ece0'), K: col('#2a211c') };
+const FOX_STRETCH = fromRows([
+  '............K...',
+  '...........oOO..',
+  '.OO........OOOO.',
+  'WOOOoOOOOOOOOKOK',
+  'WWOOOOOOOOOOWWW.',
+  '....OOOOOOOWW...',
+  '...K.......K.K..',
+  '..K...........K.'
+], FOXPAL);
+const FOX_GATHER = fromRows([
+  '............K...',
+  '...........oOO..',
+  '...........OOOO.',
+  '.OOOoOOOOOOOOKOK',
+  'WOOOOOOOOOOOWWW.',
+  'W...OOOOOOOWW...',
+  '.....K...KK.....',
+  '.....K....K.....'
+], FOXPAL);
+const DOGPAL = { W: col('#f6f1e6'), w: col('#d9cfbf'), B: col('#7b5130'), b: col('#a46f40'), K: col('#2a211c'), k: col('#6b5a4a') };
+const DOG_REST = [
+  '..............',
+  '.BB...........',
+  'BWWB...WWbb...',
+  'WkWWWWWWbbbWw.',
+  'KWWWWWWWWWWWWw',
+  'wWWWwwwwwwwwww',
+  '.ww....ww..w..'
+];
+const DOG_EXHALE = fromRows(DOG_REST, DOGPAL);
+const DOG_INHALE = fromRows(['..............', '.BB....WWb....', 'BWWB..WWWbbb..'].concat(DOG_REST.slice(3)), DOGPAL);
+const DOG_ALERT = fromRows(['.B............', '.BB...........', 'BWWB...WWbb...', 'WKWWWWWWbbbWw.'].concat(DOG_REST.slice(4)), DOGPAL);
+
+const DEERPAL = { D: col('#a8703f'), d: col('#7d4f2a'), b: col('#5f3c22'), C: col('#efe3c9'), W: col('#f6f1e6'), K: col('#2a211c') };
+const DEER_LEGS = ['.d.d...d.d..', '.d.d...d.d..', '.K.K...K.K..'];
+const DEER_UP = fromRows([
+  '........b...',
+  '.......bDD..',
+  '........DDDK',
+  '........DD..',
+  '........D...',
+  '.WDDDDDDD...',
+  'DDDDDDDDD...',
+  '.DCCCCCDd...'
+].concat(DEER_LEGS), DEERPAL);
+const DEER_DOWN = fromRows([
+  '............',
+  '............',
+  '............',
+  '............',
+  '............',
+  '.WDDDDDDDb..',
+  'DDDDDDDDDDD.',
+  '.DCCCCCDdDDK'
+].concat(DEER_LEGS), DEERPAL);
+
+const RABBIT_SPR = pair(['...gg.', '...GG.', '.GGGGK', 'WGGGGG', '.g..g.'], { G: col('#9b8b78'), g: col('#7a6b5a'), W: col('#f6f1e6'), K: col('#2a211c') });
+const HOGPAL = { S: col('#6b5038'), k: col('#8f7356'), f: col('#d8bc94'), K: col('#2a211c') };
+const HOG_A = pair(['..SkSk..', '.SkSkSff', 'SkSkSkfK', '.f..f...'], HOGPAL);
+const HOG_B = pair(['..SkSk..', '.SkSkSff', 'SkSkSkfK', '..f..f..'], HOGPAL);
+const DUCK = pair(['...GG.', '...GGY', 'BBBBB.', '.bbb..'], { G: col('#2f6b45'), Y: col('#e9b13b'), B: col('#9a8a73'), b: col('#7e6f5b') });
+const DUCKLING = pair(['..yo', 'yyy.'], { y: col('#f2d14b'), o: col('#e08a2c') });
+
+/* ---------- placement ---------- */
+const statics = [], shadowEllipses = [], autumnTrees = [], taken = [];
+const spaced = (x, y, d) => taken.every(p => Math.hypot(p[0] - x, (p[1] - y) * 2) >= d);
+const open = (x, y, gap) => Math.abs(y - laneY(x)) >= gap && Math.abs(x - streamX(y)) >= 9 && !inZone(x, y);
+
+function addStatic(img, bx, by, extra) {
+  const s = Object.assign({ img, x: Math.round(bx - img.width / 2), y: Math.round(by - img.height + 1), base: by }, extra);
+  statics.push(s);
+  return s;
+}
+function addTree(x, y) {
+  const r = rnd();
+  let frames, h, kind = 'green', cr = 0;
+  if (r < 0.58) {
+    h = 20 + (rnd() * 13 | 0);
+    frames = makePine(h, Math.round(h * 0.26), rnd() < 0.5 ? P.pineA : P.pineB);
+  } else {
+    cr = 5 + (rnd() * 3 | 0);
+    h = cr * 2 + 5 + (rnd() * 3 | 0);
+    if (r > 0.88) kind = 'autumn';
+    frames = makeRound(h, cr, kind === 'autumn' ? P.autumn : P.round);
+  }
+  const s = addStatic(frames[0], x, y, { frames, ph: rnd() * 6.28 });
+  const rx = frames[0].width * 0.45 + h * 0.18;
+  shadowEllipses.push([x + rx * 0.62, y + rx * 0.15, rx, rx * 0.42]);
+  if (kind === 'autumn') autumnTrees.push({ cx: x, top: s.y + cr, base: y, period: 5 + rnd() * 5, ph: rnd() * 10 });
+}
+function addSmall(img, x, y) {
+  addStatic(img, x, y);
+  shadowEllipses.push([x + img.width * 0.35, y + 1, img.width * 0.55, 1.6]);
+}
+
+for (let i = 0, n = 0; i < 6000 && n < 110; i++) {
+  const x = 44 + rnd() * 392, y = TOP + 6 + rnd() * (A - 12), ly = laneY(x);
+  if (!inTopM(x, y, 12) || !open(x, y, laneGap(x) + 3)) continue;
+  if (Math.hypot(x - DOGX, (y - ly) * 2) < 64) continue;   // the dog's clearing
+  if (y > ly && y - ly < 36 && x > 84 && x < 396) continue; // keep the run visible
+  if (!spaced(x, y, 10)) continue;
+  taken.push([x, y]); n++;
+  addTree(Math.round(x), Math.round(y));
+}
+// Bushes where the fox enters and leaves.
+[[62, 7, 6], [74, 9, 4], [418, 7, 6], [406, 9, 4]].forEach(([x, dy, r]) => { addSmall(makeBush(r), x, laneY(x) + dy); taken.push([x, laneY(x) + dy]); });
+function scatter(count, minGap, make, avoidDog) {
+  for (let i = 0, n = 0; i < 3000 && n < count; i++) {
+    const x = Math.round(48 + rnd() * 384), y = Math.round(TOP + 8 + rnd() * (A - 16));
+    if (!inTopM(x, y, 14) || !open(x, y, 8) || !spaced(x, y, minGap)) continue;
+    if (Math.hypot(x - DOGX, (y - DOGY) * 2) < avoidDog) continue;
+    taken.push([x, y]); n++;
+    addSmall(make(), x, y);
+  }
+}
+scatter(34, 8, () => makeBush(3 + (rnd() * 3 | 0)), 34);
+scatter(14, 6, () => makeRock(4 + (rnd() * 4 | 0), 3 + (rnd() * 2 | 0)), 20);
+scatter(12, 4, () => MUSHROOM, 24);
+scatter(2, 14, () => LOG, 40);
+addStatic(LOG_LONG, LOGX, LOGY + 2);
+for (let i = 0; i < 11; i++) {
+  const a = Math.PI * (0.85 + i * 0.13 + rnd() * 0.05);
+  addStatic(CATTAIL, Math.round(POND.x + Math.cos(a) * (POND.rx + 2)), Math.round(POND.y + Math.sin(a) * (POND.ry + 1.5)));
+}
+
+const clusters = [[DOGX + 40, DOGY - 13], [DOGX - 36, DOGY + 15], [DOGX + 54, DOGY + 17]];
+
+/* ---------- bake the ground ---------- */
+const G = new Uint32Array(W * H);
+const shadowMask = new Uint8Array(W * H);
+for (const [cx, cy, rx, ry] of shadowEllipses) {
+  for (let y = Math.floor(cy - ry); y <= cy + ry; y++) for (let x = Math.floor(cx - rx); x <= cx + rx; x++) {
+    if (x < 0 || y < 0 || x >= W || y >= H) continue;
+    const e = ((x + 0.5 - cx) / rx) ** 2 + ((y + 0.5 - cy) / ry) ** 2;
+    if (e < 0.72 + 0.28 * bayer(x, y)) shadowMask[y * W + x] = 1;
+  }
+}
+const waterPx = [];
+for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+  const i = y * W + x;
+  let c = P.paper;
+  if (inTop(x, y)) {
+    const dxs = x - streamX(y), pe = pondE(x, y);
+    let wet = false;
+    if (pe < 1) {
+      c = P.water[1]; wet = true;
+      waterPx.push({ i, x, y, e: pe, n: hash(x, y * 5), k: 2 });
+    } else if (pe < 1.45) {
+      c = hash(x * 3, y * 7) < 0.25 ? P.reed : P.bank;
+    } else if (Math.abs(dxs) <= 3 + (hash(x * 7, y) < 0.3 ? 1 : 0)) {
+      c = P.water[1]; wet = true;
+      waterPx.push({ i, x, y, dx: dxs, n: hash(x, y * 5), k: 0 });
+    } else if (Math.abs(dxs) <= 5) {
+      c = P.bank;
+    } else {
+      const v = vnoise(x * 0.07, y * 0.14) * 0.65 + vnoise(x * 0.23 + 50, y * 0.46) * 0.35 + (bayer(x, y) - 0.5) * 0.22;
+      c = pick(P.grass, (v - 0.2) * 1.6 - (hash(x * 5, y * 3) < 0.04 ? 0.25 : 0));
+      const nearFlowers = clusters.some(([fx, fy]) => Math.hypot(x - fx, (y - fy) * 2) < 9);
+      if (hash(x * 13, y * 17) < (nearFlowers ? 0.14 : 0.005)) c = P.flowers[hash(x, y) * 4 | 0];
+      if (!inTop(x, y - 1) && y < MID) c = P.rim;
+    }
+    if (shadowMask[i] && !wet) c = shade(c);
+  } else {
+    const cxp = x + 0.5;
+    const edge = cxp < CX ? MID + (cxp - (CX - A)) / 2 : BOT - (cxp - CX) / 2;
+    const d = y + 0.5 - edge;
+    if (cxp >= CX - A && cxp <= CX + A && d > 0 && d <= T) {
+      const di = Math.floor(d);
+      if (di === 0 || (di === 1 && hash(x, 7) < 0.4)) c = P.lip;
+      else if (di <= 2) c = P.topsoil;
+      else if (di === T - 1) c = P.under;
+      else if (hash(x * 3, y * 5) < 0.06) c = P.stone;
+      else c = (di === 6 || di === 7) ? P.band : P.soil;
+      if (cxp > CX) c = tint(c, 0.8, 0.8, 0.82);
+    } else if (Math.abs(x + 0.5 - CX - 10) / A + Math.abs(y + 0.5 - MID - T - 6) / (A / 2) <= 1 - 0.02 * bayer(x, y)) {
+      c = P.table;
+    }
+  }
+  G[i] = c;
+}
+// The stream spills over the front-right edge.
+for (let x = 280; x < 380; x++) {
+  const e = BOT - (x + 0.5 - CX) / 2, ye = Math.floor(e - 0.5);
+  if (Math.abs(x - streamX(ye)) > 3) continue;
+  for (let y = ye + 1; y < ye + T + 8; y++) waterPx.push({ i: y * W + x, x, f: y + 0.5 - e, k: 1 });
+}
+
+/* ---------- motion ---------- */
+const RUN = 58, X0 = 50, X1 = 430, CYCLE = (X1 - X0) / RUN + 2.6, JUMP = 17;
+function fox(t) {
+  const tt = t % CYCLE, x = X0 + RUN * tt;
+  if (x > X1) return null;
+  const d = x - DOGX, jump = Math.abs(d) < JUMP ? 11 * (1 - (d / JUMP) ** 2) : 0;
+  const onLog = Math.abs(x - LOGX) <= 7 ? 2 : 0;
+  return { x, h: jump + onLog, gather: jump < 0.5 && Math.floor(tt * 11) % 2 === 1 };
+}
+function rabbit(t) {
+  const k = Math.floor(t / 7), tt = t % 7, dir = k % 2 ? -1 : 1;
+  const hop = tt < 1.2 ? (tt % 0.4) / 0.4 : 0;
+  const moved = tt < 1.2 ? (Math.floor(tt / 0.4) + hop) * 5 : 15;
+  return { x: (dir > 0 ? RABBIT.x - 8 : RABBIT.x + 7) + dir * moved, h: Math.sin(hop * Math.PI) * 3, dir };
+}
+const flies = clusters.map(([cx, cy], i) => ({ cx, cy, ph: i * 2.1, c: i % 2 ? '#f2d14b' : '#fbf6ea' }));
+const flock = [[0, 0, 0], [7, -5, 0.4], [9, 6, 0.9]];
+
+const frame = ctx.createImageData(W, H), F = new Uint32Array(frame.data.buffer);
+function darken(cx, cy, rx, ry) {
+  for (let y = Math.floor(cy - ry); y <= cy + ry; y++) for (let x = Math.floor(cx - rx); x <= cx + rx; x++) {
+    if (x < 0 || y < 0 || x >= W || y >= H || !inTop(x, y)) continue;
+    if (((x + 0.5 - cx) / rx) ** 2 + ((y + 0.5 - cy) / ry) ** 2 < 1) F[y * W + x] = shade(F[y * W + x]);
+  }
+}
+const put = (x, y, c) => { x = Math.round(x); y = Math.round(y); if (x >= 0 && y >= 0 && x < W && y < H) F[y * W + x] = c; };
+const dot = (c, x, y, w = 1, h = 1) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), w, h); };
+const sprite = (img, cx, by) => ctx.drawImage(img, Math.round(cx - img.width / 2), Math.round(by - img.height + 1));
+const Z = [[0, 0], [1, 0], [2, 0], [3, 0], [2, 1], [1, 2], [0, 3], [1, 3], [2, 3], [3, 3]];
+/* The caption follows the fox; with no fox on stage the whole line is lit. */
+const words = [...document.querySelectorAll('.line span')];
+let lastWord = null;
+function caption(g) {
+  if (g === lastWord) return;
+  lastWord = g;
+  words.forEach((s, i) => s.classList.toggle('on', g < 0 || i === g));
+}
+
+function draw(t) {
+  F.set(G);
+  for (const p of waterPx) {
+    let c;
+    if (p.k === 0) {
+      const v = Math.sin(p.y * 0.55 - t * 6 + p.n * 5 + p.x * 0.35);
+      c = Math.abs(p.dx) >= 3 ? P.water[0] : v > 0.93 ? P.water[3] : v > 0.6 ? P.water[2] : P.water[1];
+    } else if (p.k === 2) {
+      const v = Math.sin(p.x * 0.45 + p.y * 0.9 - t * 1.2 + p.n * 4);
+      c = p.e > 0.75 ? P.water[0] : v > 0.995 && p.n > 0.6 ? P.water[3] : v > 0.93 ? P.water[2] : P.water[1];
+    } else {
+      const v = Math.sin(p.f * 0.9 - t * 12 + p.x * 1.9);
+      if (p.f > T) { if (v < 0.75 + (p.f - T) * 0.03) continue; c = P.water[2]; }
+      else c = p.f <= 1.5 ? P.water[3] : v > 0.55 ? P.water[2] : P.water[1];
+    }
+    F[p.i] = c;
+  }
+
+  const items = [];
+  const add = (base, fn) => items.push({ base, draw: fn });
+
+  // Fox and dog
+  const fx = fox(t);
+  caption(!fx || fx.x <= 58 || fx.x >= 422 ? -1 : fx.x < DOGX - JUMP ? 0 : fx.x <= DOGX + JUMP ? 1 : 2);
+  darken(DOGX + 1, DOGY + 2, 8, 1.6);
+  if (fx) darken(fx.x + 1, laneY(fx.x) + 1.5, 6 - fx.h * 0.25, 1.4);
+  const alert = fx && Math.abs(fx.x - DOGX) < 30;
+  const dogTop = DOGY + 2 - 6;
+  add(DOGY + 2, () => {
+    ctx.drawImage(alert ? DOG_ALERT : Math.sin(t * 1.8) > 0 ? DOG_INHALE : DOG_EXHALE, DOGX - 7, dogTop);
+    if (alert) return;
+    for (let i = 0; i < 2; i++) {
+      const s = (t * 0.4 + i * 0.5) % 1;
+      if (s > 0.85) continue;
+      const zx = Math.round(DOGX - 6 - s * 4), zy = Math.round(dogTop - 5 - s * 14);
+      for (const [px, py] of Z) dot('#ffffff', zx + px, zy + py);
+    }
+  });
+  if (fx && fx.x > 58 && fx.x < 422) {
+    add(laneY(fx.x) + 2.5, () => ctx.drawImage(fx.gather ? FOX_GATHER : FOX_STRETCH, Math.round(fx.x) - 8, Math.round(laneY(fx.x) + 1 - fx.h) - 7 - (fx.gather ? 1 : 0)));
+  }
+
+  // Deer drinking at the stream; looks up while the fox is near.
+  const deerUp = (fx && Math.abs(fx.x - DEER.x) < 60) || (t % 7) > 4.5;
+  darken(DEER.x + 1, DEER.y + 1, 7, 1.5);
+  add(DEER.y, () => sprite(deerUp ? DEER_UP : DEER_DOWN, DEER.x, DEER.y));
+
+  // Ducks circling the pond, ducklings in tow.
+  [[0, DUCK], [0.32, DUCKLING], [0.56, DUCKLING]].forEach(([lag, spr], i) => {
+    const a = t * Math.PI * 2 / 26 - lag;
+    const x = POND.x + Math.cos(a) * (POND.rx - 6), y = POND.y + Math.sin(a) * (POND.ry - 3.5);
+    const dir = -Math.sin(a) >= 0 ? 0 : 1;
+    if (i === 0) put(x + (dir ? 4 : -4), y + 1, P.water[3]);
+    add(y + 0.5, () => sprite(spr[dir], x, y + 1));
+  });
+
+  // Rabbit
+  const rb = rabbit(t);
+  darken(rb.x, RABBIT.y + 1, 3 - rb.h * 0.3, 1);
+  add(RABBIT.y, () => sprite(RABBIT_SPR[rb.dir > 0 ? 0 : 1], rb.x, RABBIT.y - rb.h));
+
+  // Hedgehog pottering back and forth.
+  const hx = HOG.x + Math.sin(t * 0.25) * 10, hdir = Math.cos(t * 0.25) > 0 ? 0 : 1;
+  darken(hx, HOG.y + 1, 4, 1);
+  add(HOG.y, () => sprite((Math.floor(t * 4) % 2 ? HOG_A : HOG_B)[hdir], hx, HOG.y));
+
+  // A fish jumps now and then.
+  const ft = t % 6.5;
+  if (ft < 0.9) {
+    const k = ft / 0.9;
+    if (k < 0.15 || k > 0.85) for (const dx of [-1, 1]) put(FISH.x + (k < 0.5 ? -3 : 3) + dx, FISH.y, P.water[3]);
+    if (k > 0.1 && k < 0.9) add(FISH.y + 0.5, () => dot('#c9d6dc', FISH.x - 3 + 6 * k, FISH.y - Math.sin(k * Math.PI) * 5, 2, 1));
+  }
+
+  // Birds overhead, butterflies over the flowers.
+  const bt = t % 24, birds = [];
+  if (bt < 16) for (const [dx, dy, ph] of flock) {
+    const x = W + 12 + dx - bt * 34, gy = 120 + dy, alt = 54 + Math.sin(t * 1.1 + ph) * 3;
+    birds.push({ x, y: gy - alt, up: Math.floor(t * 7 + ph * 5) % 2 });
+    if (inTop(Math.round(x + alt * 0.4), gy)) darken(x + alt * 0.4, gy, 1.5, 0.8);
+  }
+  for (const f of flies) {
+    const x = f.cx + Math.sin(t * 0.9 + f.ph) * 7 + Math.sin(t * 2.3 + f.ph) * 2;
+    const y = f.cy + Math.cos(t * 0.7 + f.ph) * 3, alt = 4 + Math.sin(t * 3.1 + f.ph) * 2;
+    put(x, y, shade(F[Math.round(y) * W + Math.round(x)]));
+    add(f.cy, () => Math.floor(t * 12 + f.ph * 5) % 2 ? dot(f.c, x - 1, y - alt, 3, 1) : dot(f.c, x, y - alt));
+  }
+  for (const a of autumnTrees) {
+    const age = (t + a.ph) % a.period;
+    if (age > 2.6) continue;
+    const k = age / 2.6;
+    add(a.base + 0.5, () => dot('#e9b048', a.cx + Math.sin(age * 3 + a.ph) * 2.5 + k * 3, a.top + (a.base - 1 - a.top) * k));
+  }
+  ctx.putImageData(frame, 0, 0);
+
+  for (const s of statics) {
+    if (s.frames) add(s.base, () => ctx.drawImage(s.frames[Math.sin(t * 0.9 + s.ph) > 0.75 ? 1 : 0], s.x, s.y));
+    else add(s.base, () => ctx.drawImage(s.img, s.x, s.y));
+  }
+  items.sort((a, b) => a.base - b.base);
+  for (const it of items) it.draw();
+  for (const b of birds) {
+    const x = Math.round(b.x), y = Math.round(b.y);
+    if (b.up) { dot('#3a3632', x, y); dot('#3a3632', x + 2, y); dot('#3a3632', x + 1, y + 1); }
+    else { dot('#3a3632', x + 1, y); dot('#3a3632', x, y + 1); dot('#3a3632', x + 2, y + 1); }
+  }
+}
+
+if (reduce) {
+  draw((DOGX - X0) / RUN);
+  caption(-1);
+} else {
+  const t0 = performance.now();
+  let last = -1e9;
+  const loop = now => {
+    requestAnimationFrame(loop);
+    if (now - last < 1000 / 30) return;
+    last = now;
+    draw((now - t0) / 1000);
+  };
+  requestAnimationFrame(loop);
+}
+})();
+</script>
+</body>
+</html>
