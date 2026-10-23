@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quick Brown Fox Pocket LCD</title>
+<style>
+:root{
+  --page:#e7e5de;
+  --shell:#cbc8bf;
+  --shell-hi:#d9d6ce;
+  --shell-lo:#aeaaa0;
+  --bezel:#5c5a66;
+  --bezel-text:#aeacba;
+  --ink:#2f2d63;
+  --key:#2b2a2e;
+  --ab:#8f2350;
+  --led:#e3263b;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--page)}
+body{min-height:100vh;display:grid;place-items:center;padding:56px 16px 32px;font-family:"Helvetica Neue",Arial,sans-serif;-webkit-tap-highlight-color:transparent}
+.back{position:fixed;top:16px;left:16px;width:26px;height:26px;display:grid;place-items:center;border:1.5px solid #a9a59b;border-radius:50%;color:#4a4740;text-decoration:none;font:15px/1 ui-monospace,Menlo,Consolas,monospace}
+.back:hover,.back:focus-visible{border-color:#4a4740;background:var(--shell-hi);outline:none}
+
+/* The shell */
+.device{width:min(440px,100%);background:linear-gradient(160deg,var(--shell-hi),var(--shell) 40%);border-radius:12px 12px 60px 12px;padding:22px 20px 28px;box-shadow:inset 0 2px 0 #ffffff80,inset 0 -3px 0 var(--shell-lo),0 1px 0 #00000014,0 18px 30px -18px #0000005c;user-select:none;-webkit-user-select:none}
+.topline{height:10px;margin:-10px -4px 14px;border-bottom:1.5px solid var(--shell-lo);position:relative}
+.topline::before,.topline::after{content:"";position:absolute;bottom:-1.5px;width:1.5px;height:10px;background:var(--shell-lo)}
+.topline::before{left:16px}.topline::after{right:16px}
+.bezel{background:var(--bezel);border-radius:8px 8px 34px 8px;padding:12px 0 18px;display:grid;justify-items:center;gap:8px}
+.bezel-label{width:100%;display:flex;align-items:center;gap:8px;padding:0 14px;color:var(--bezel-text);font:italic 700 8px/1 "Helvetica Neue",Arial,sans-serif;letter-spacing:.08em;white-space:nowrap}
+.bezel-label::before,.bezel-label::after{content:"";height:1.5px;flex:1}
+.bezel-label::before{background:linear-gradient(#8f2350 0 50%,#2f2d63 50%)}
+.bezel-label::after{background:linear-gradient(#8f2350 0 50%,#2f2d63 50%)}
+.screen-row{display:flex;align-items:flex-start;gap:10px;justify-content:center;width:100%}
+.power{display:grid;justify-items:center;gap:4px;color:var(--bezel-text);font:7px/1 "Helvetica Neue",Arial,sans-serif;letter-spacing:.06em;width:24px}
+/* The lamp sits a little above the middle of the screen, towards the bezel's left edge. */
+.power:first-child{margin-top:calc(var(--lcd-h,288px) * .28);transform:translateX(-6px)}
+.led{width:6px;height:6px;border-radius:50%;background:#5a1a22}
+.led.on{background:var(--led);box-shadow:0 0 6px var(--led)}
+.lcd{position:relative;line-height:0;box-shadow:0 0 0 2px #00000026}
+.lcd canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges}
+.lcd::after{content:"";position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(to right,#0000000d 1px,transparent 1px),linear-gradient(to bottom,#0000000d 1px,transparent 1px);background-size:var(--px,2px) var(--px,2px)}
+.maker{display:flex;align-items:baseline;gap:5px;margin:12px 0 0 4px;color:var(--ink);font:800 11px/1 "Helvetica Neue",Arial,sans-serif;letter-spacing:.01em}
+.maker span{font:italic 500 19px/1 "Helvetica Neue","Arial Narrow",Arial,sans-serif;letter-spacing:.02em;transform:scaleX(.9);transform-origin:left}
+
+/* Controls */
+.controls{position:relative;height:174px;margin-top:22px}
+.dpad{position:absolute;left:4px;top:18px;width:84px;height:84px}
+.dpad button{position:absolute;background:var(--key);border:0;padding:0;cursor:pointer}
+.dpad .h,.dpad .v{position:absolute;background:var(--key);border-radius:4px;pointer-events:none;box-shadow:0 3px 0 #18171a}
+.dpad .h{left:0;top:28px;width:84px;height:28px}
+.dpad .v{left:28px;top:0;width:28px;height:84px}
+.dpad [data-key]{background:transparent;width:28px;height:28px}
+.dpad [data-key="left"]{left:0;top:28px}.dpad [data-key="right"]{left:56px;top:28px}
+.dpad [data-key="up"]{left:28px;top:0}.dpad [data-key="down"]{left:28px;top:56px}
+.dpad::after{content:"";position:absolute;left:34px;top:34px;width:16px;height:16px;border-radius:50%;background:radial-gradient(#3d3c42,var(--key) 70%);pointer-events:none}
+.dpad .arrow{position:absolute;width:0;height:0;border:5px solid transparent;pointer-events:none}
+.dpad .arrow.l{left:6px;top:37px;border-right-color:#55545c}.dpad .arrow.r{right:6px;top:37px;border-left-color:#55545c}
+.dpad .arrow.u{left:37px;top:6px;border-bottom-color:#55545c}.dpad .arrow.d{left:37px;bottom:6px;border-top-color:#55545c}
+.ab{position:absolute;right:2px;top:20px;width:124px;height:70px;transform:rotate(-25deg);background:#bdb9b0;border-radius:36px;box-shadow:inset 0 1px 2px #00000026}
+.ab button{position:absolute;top:9px;width:52px;height:52px;border-radius:50%;border:0;background:radial-gradient(circle at 40% 35%,#a8335f,var(--ab) 65%);box-shadow:0 3px 0 #5e1734;cursor:pointer}
+.ab [data-key="b"]{left:7px}.ab [data-key="a"]{right:7px}
+.ab-label{position:absolute;top:80px;width:52px;text-align:center;color:var(--ink);font:italic 700 11px/1 "Helvetica Neue",Arial,sans-serif;letter-spacing:.06em}
+.ab-label.b{left:7px}.ab-label.a{right:7px}
+.pills{position:absolute;left:50%;bottom:0;transform:translateX(-54%);display:flex;gap:18px}
+.pill{display:grid;justify-items:center;gap:7px;transform:rotate(-25deg)}
+.pill button{width:38px;height:10px;border-radius:5px;border:0;background:#8a877f;box-shadow:inset 0 0 0 3px #bdb9b0;cursor:pointer}
+.pill span{color:var(--ink);font:italic 700 8px/1 "Helvetica Neue",Arial,sans-serif;letter-spacing:.1em}
+.speaker{position:absolute;right:20px;bottom:-2px;display:flex;gap:7px;transform:rotate(-30deg)}
+.speaker i{width:5px;height:26px;border-radius:3px;background:#a29e94;box-shadow:inset 0 1px 2px #00000040}
+button:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+.dpad [data-key]:focus-visible{outline-offset:-2px}
+button.down{transform:translateY(2px);box-shadow:none!important}
+@media (prefers-reduced-motion:reduce){button.down{transform:none}}
+</style>
+</head>
+<body>
+<a class="back" href="/the-quick-brown-fox-jumps-over-the-lazy-dog" aria-label="All versions"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" style="display:block"><path d="M11.5 7h-9M6 3 2.5 7 6 11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+<main class="device">
+  <div class="topline" aria-hidden="true"></div>
+  <div class="bezel">
+    <div class="bezel-label" aria-hidden="true">4-SHADE POCKET LCD</div>
+    <div class="screen-row">
+      <div class="power" aria-hidden="true"><i class="led on"></i>POWER</div>
+      <div class="lcd"><canvas id="lcd" width="160" height="144" role="img" aria-label="A four-shade pixel scene: a fox runs through a forest and jumps over a sleeping dog while a text box types out: the quick brown fox jumps over the lazy dog."></canvas></div>
+      <div class="power" aria-hidden="true"></div>
+    </div>
+  </div>
+  <p class="maker">Dennki<span>BREWING</span></p>
+  <div class="controls">
+    <div class="dpad" role="group" aria-label="Direction pad">
+      <span class="h"></span><span class="v"></span>
+      <i class="arrow l"></i><i class="arrow r"></i><i class="arrow u"></i><i class="arrow d"></i>
+      <button data-key="left" aria-label="Slower"></button>
+      <button data-key="right" aria-label="Faster"></button>
+      <button data-key="up" aria-label="Up" tabindex="-1"></button>
+      <button data-key="down" aria-label="Down" tabindex="-1"></button>
+    </div>
+    <div class="ab">
+      <button data-key="b" aria-label="B: jump"></button>
+      <button data-key="a" aria-label="A: jump"></button>
+      <span class="ab-label b" aria-hidden="true">B</span><span class="ab-label a" aria-hidden="true">A</span>
+    </div>
+    <div class="pills">
+      <div class="pill"><button data-key="select" aria-label="Select: change palette"></button><span aria-hidden="true">SELECT</span></div>
+      <div class="pill"><button data-key="start" aria-label="Start: pause"></button><span aria-hidden="true">START</span></div>
+    </div>
+    <div class="speaker" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  </div>
+</main>
+<script>
+(() => {
+'use strict';
+const W = 160, H = 144, PLAY = 104, GROUND = 84;
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const view = document.getElementById('lcd');
+const out = view.getContext('2d');
+const lcd = document.querySelector('.lcd');
+
+/* Whole-pixel scaling for the LCD. */
+function fit() {
+  const dpr = window.devicePixelRatio || 1;
+  const room = Math.min(document.querySelector('.bezel').clientWidth - 68, 400);
+  const snapped = W * Math.max(1, Math.floor(room * dpr / W)) / dpr;
+  // Whole-pixel scaling unless it would waste more than a fifth of the room (small phones).
+  const css = snapped >= room * 0.8 ? snapped : room;
+  view.style.width = css + 'px';
+  view.style.height = css * H / W + 'px';
+  lcd.style.setProperty('--px', (css / W) + 'px');
+  document.querySelector('.screen-row').style.setProperty('--lcd-h', (css * H / W) + 'px');
+}
+addEventListener('resize', fit);
+fit();
+
+/* ---------- palettes: lightest to darkest ---------- */
+const PALETTES = [
+  ['#9bbc0f', '#8bac0f', '#306230', '#0f380f'],
+  ['#c5c8b8', '#8b8f7a', '#4a4d3f', '#181a14'],
+  ['#d4f0e4', '#82c3ac', '#3c7766', '#10302a'],
+];
+let palette = 0;
+const rgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+let colours = PALETTES[0].map(rgb);
+
+/* ---------- the shade buffer ---------- */
+const buf = new Uint8Array(W * H);
+const put = (x, y, s) => { if (x >= 0 && y >= 0 && x < W && y < H) buf[y * W + x] = s; };
+const rect = (x, y, w, h, s) => { for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) put(i, j, s); };
+const hash = (n) => { n = Math.imul(n ^ (n >>> 16), 0x45d9f3b); n = Math.imul(n ^ (n >>> 16), 0x45d9f3b); return ((n ^ (n >>> 16)) >>> 0) / 4294967296; };
+
+/* Sprites: '.' clear, '0'..'3' shades. An outline in the darkest shade keeps them legible. */
+function sprite(rows, map) {
+  const h = rows.length, w = rows[0].length, data = new Uint8Array(w * h).fill(255);
+  rows.forEach((row, y) => [...row].forEach((ch, x) => { const v = map ? map[ch] : ch; if (v !== undefined && v !== '.') data[y * w + x] = Number(v); }));
+  return { w, h, data };
+}
+function outlined(s) {
+  const w = s.w + 2, h = s.h + 2, data = new Uint8Array(w * h).fill(255);
+  for (let y = 0; y < s.h; y++) for (let x = 0; x < s.w; x++) if (s.data[y * s.w + x] !== 255) data[(y + 1) * w + x + 1] = s.data[y * s.w + x];
+  const solid = (x, y) => x >= 0 && y >= 0 && x < w && y < h && data[y * w + x] !== 255 && data[y * w + x] !== 9;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (data[y * w + x] === 255 && (solid(x - 1, y) || solid(x + 1, y) || solid(x, y - 1) || solid(x, y + 1))) data[y * w + x] = 9;
+  for (let i = 0; i < data.length; i++) if (data[i] === 9) data[i] = 3;
+  return { w, h, data };
+}
+function blit(s, x, y, flip = false) {
+  x = Math.round(x); y = Math.round(y);
+  for (let j = 0; j < s.h; j++) for (let i = 0; i < s.w; i++) {
+    const v = s.data[j * s.w + (flip ? s.w - 1 - i : i)];
+    if (v !== 255) put(x + i, y + j, v);
+  }
+}
+
+/* The fox, facing right: pricked ears, long muzzle and dark nose, pale chest, a big brush with a white tip, dark legs. */
+const FOX_TOP = [
+  '..................3..3..',
+  '..................11.11..',
+  '.................111111..',
+  '.................1131111',
+  '..2222..........11110003',
+  '.222222.111111111110000.',
+  '22222221111111111100....',
+  '0022222111111111110.....',
+  '00.22..1111111111.......',
+];
+/* Foreground animals are drawn dark, the scenery behind them light. */
+const FOXMAP = { 0: '0', 1: '2', 2: '2', 3: '3' };
+/* Only the body gets an outline; legs hang below it bare, so the gaps between them stay open. */
+function withLegs(body, legRows) {
+  const legs = sprite(legRows), w = body.w, h = body.h + legs.h - 1, data = new Uint8Array(w * h).fill(255);
+  data.set(body.data);
+  for (let y = 0; y < legs.h; y++) for (let x = 0; x < legs.w; x++) {
+    const v = legs.data[y * legs.w + x];
+    if (v !== 255) data[(body.h - 1 + y) * w + x + 1] = v;
+  }
+  return { w, h, data };
+}
+const FOX_BODY = outlined(sprite(FOX_TOP, FOXMAP));
+// Four legs: the near pair darkest, the far pair a shade lighter.
+const FOX_RUN = [
+  withLegs(FOX_BODY, ['......33.2....2.33......', '.....33..2.....2..33....', '....33..2.......2...33..', '...3...2.........2....3.']),
+  withLegs(FOX_BODY, ['........3.2...2.3.......', '........3.2...2.3.......', '........3.2...2.3.......', '.......33.2..22.33......']),
+];
+/* The dog, asleep facing left: domed head over a long muzzle, dark nose, eye shut, a floppy ear,
+   chin on its front paws, a patch on its back, the curve of its hind leg, tail curled up behind. */
+const DOG = outlined(sprite([
+  '......11111................1',
+  '.....1111222..............11',
+  '.....11112222.............1.',
+  '....1111122221122221111111..',
+  '..33113312222112221111111...',
+  '..31111112221111111112111...',
+  '..11111111211111111121111...',
+  '..12211111111111111121111...',
+  '1111111111111111111112111...',
+  '1212111222222222222211111...',
+]));
+const ZED = sprite(['333', '..3', '.3.', '333']);
+const CLOUD = sprite(['....1111......', '..11000011....', '.1000000001111', '100000000000001', '.111111111111.'].map((r) => r.padEnd(15, '.')));
+function pine(h) {
+  const half = Math.floor(h * 0.3), w = half * 2 + 1, rows = [];
+  for (let y = 0; y < h; y++) {
+    let row = '';
+    const trunk = y >= h - 3, t = (y + 1) / (h - 3), k = (t * 3) % 1;
+    const hw = trunk ? 0 : Math.round(half * (0.3 + 0.7 * t) * (0.45 + 0.55 * (k || 1)));
+    for (let x = 0; x < w; x++) {
+      const dx = x - half;
+      if (trunk) row += dx === 0 ? '2' : '.';
+      else if (Math.abs(dx) <= hw) row += (dx > 0 && (x + y) % 2) || (k > 0.8 && k < 1) ? '2' : '1';
+      else row += '.';
+    }
+    rows.push(row);
+  }
+  return sprite(rows);
+}
+const PINES = [16, 20, 24, 28].map(pine);
+const BUSH = sprite(['..1111..', '.111111.', '11111112', '11111222']);
+
+/* ---------- a 5x7 font for the capitals ---------- */
+const GLYPHS = {
+  A: '01110100011000111111100011000110001', B: '11110100011000111110100011000111110', C: '01110100011000010000100001000101110',
+  D: '11110100011000110001100011000111110', E: '11111100001000011110100001000011111', F: '11111100001000011110100001000010000',
+  G: '01110100011000010111100011000101111', H: '10001100011000111111100011000110001', I: '01110001000010000100001000010001110',
+  J: '00111000100001000010000101001001100', K: '10001100101010011000101001001010001', L: '10000100001000010000100001000011111',
+  M: '10001110111010110101100011000110001', N: '10001100011100110101100111000110001', O: '01110100011000110001100011000101110',
+  P: '11110100011000111110100001000010000', Q: '01110100011000110001101011001001101', R: '11110100011000111110101001001010001',
+  S: '01111100001000001110000010000111110', T: '11111001000010000100001000010000100', U: '10001100011000110001100011000101110',
+  V: '10001100011000110001100010101000100', W: '10001100011000110101101011010101010', X: '10001100010101000100010101000110001',
+  Y: '10001100010101000100001000010000100', Z: '11111000010001000100010001000011111',
+};
+function text(str, x, y, s = 3) {
+  [...str].forEach((ch, n) => {
+    const g = GLYPHS[ch];
+    if (!g) return;
+    for (let i = 0; i < 35; i++) if (g[i] === '1') put(x + n * 6 + (i % 5), y + Math.floor(i / 5), s);
+  });
+}
+
+/* ---------- the world ---------- */
+const FOX_X = 30, DOG_GAP = 300, DOG_FIRST = 230;
+const LINES = ['THE QUICK BROWN FOX', 'JUMPS OVER THE LAZY DOG'];
+const STOPS = [LINES[0].length, LINES[0].length + 'JUMPS OVER'.length, LINES[0].length + LINES[1].length];
+const JUMP_V = -200, GRAVITY = 360;
+const state = { cam: 0, speed: 60, y: 0, vy: 0, step: 0, dog: -1, phase: 0, typed: 0, clock: 0, paused: false };
+
+const dogX = (n) => DOG_FIRST + n * DOG_GAP - state.cam;
+function jump() { if (state.y === 0 && !state.paused) state.vy = JUMP_V; }
+
+function update(dt) {
+  if (state.paused) return;
+  state.clock += dt;
+  // In the air the fox always covers enough ground to clear the dog.
+  const move = (state.y < 0 || state.vy < 0 ? Math.max(state.speed, 60) : state.speed) * dt;
+  state.cam += move;
+  state.step += move;
+  // The next dog ahead of the fox's tail.
+  const n = Math.max(0, Math.ceil((state.cam + FOX_X - DOG_FIRST - DOG.w) / DOG_GAP));
+  const dx = dogX(n);
+  if (n !== state.dog && dx < W + 6) { state.dog = n; state.phase = 1; state.typed = 0; }
+  const front = FOX_X + FOX_RUN[0].w;
+  if (state.y === 0 && dx - front > 0 && dx - front <= 8) jump();
+  if (state.vy || state.y < 0) {
+    if (state.y === 0 && state.phase === 1) state.phase = 2;
+    state.vy += GRAVITY * dt;
+    state.y = Math.min(0, state.y + state.vy * dt);
+    if (state.y === 0) state.vy = 0;
+  }
+  if (state.y === 0 && state.phase === 2 && dogX(state.dog) + DOG.w < FOX_X) state.phase = 3;
+  const limit = state.phase ? STOPS[state.phase - 1] : 0;
+  state.typed = Math.min(limit, state.typed + 18 * dt);
+}
+
+function draw() {
+  const { cam, clock } = state;
+  // Sky and clouds.
+  buf.fill(0, 0, W * PLAY);
+  for (let i = Math.floor(cam * 0.15 / 90) - 1; i < Math.floor(cam * 0.15 / 90) + 3; i++) blit(CLOUD, i * 90 + hash(i + 7) * 40 - cam * 0.15, 8 + hash(i) * 22);
+  // Far hills.
+  for (let x = 0; x < W; x++) {
+    const wx = x + cam * 0.25, top = Math.round(56 + 6 * Math.sin(wx * 0.03) + 4 * Math.sin(wx * 0.071 + 1));
+    for (let y = top; y < GROUND; y++) put(x, y, y === top || (x + 2 * y) % 5 === 0 ? 1 : 0);
+  }
+  // Forest.
+  const near = cam * 0.5;
+  for (let i = Math.floor(near / 22) - 2; i < Math.floor(near / 22) + 10; i++) {
+    const r = hash(i * 31 + 5), sx = i * 22 + r * 10 - near;
+    if (r < 0.18) { blit(BUSH, sx, GROUND - 4); continue; }
+    const tree = PINES[Math.floor(hash(i * 13 + 1) * PINES.length)];
+    blit(tree, sx, GROUND - tree.h + 1);
+  }
+  // Ground.
+  for (let x = 0; x < W; x++) {
+    const wx = Math.floor(x + cam);
+    put(x, GROUND, 3);
+    if (hash(wx * 3) < 0.22) { put(x, GROUND - 1, 2); if (hash(wx * 7) < 0.4) put(x, GROUND - 2, 2); }
+    for (let y = GROUND + 1; y < PLAY; y++) put(x, y, y === GROUND + 1 ? 2 : (wx + y * 2) % 7 === 0 && y > GROUND + 4 ? 2 : 1);
+    if (hash(wx * 11 + 3) < 0.03) put(x, GROUND + 6 + Math.floor(hash(wx) * 10), 3);
+  }
+  // The dog, asleep, and the fox.
+  const dx = dogX(Math.max(0, state.dog));
+  if (state.dog >= 0 && dx > -DOG.w && dx < W) {
+    blit(DOG, dx, GROUND - DOG.h + 1);
+    const z = (clock * 0.6) % 1;
+    if (z < 0.85) blit(ZED, dx + 1 - z * 4, GROUND - DOG.h - 4 - z * 10);
+  }
+  const frame = state.y < 0 ? FOX_RUN[0] : FOX_RUN[Math.floor(state.step / 6) % 2];
+  // Shadow under a jumping fox.
+  if (state.y < -2) for (let i = 4; i < 14; i++) if ((i + Math.floor(clock * 30)) % 2) put(FOX_X + i, GROUND + 1, 3);
+  blit(frame, FOX_X, GROUND - frame.h + 1 + Math.round(state.y) - (state.y === 0 && frame === FOX_RUN[1] ? 1 : 0));
+
+  // The text box.
+  rect(0, PLAY, W, H - PLAY, 0);
+  rect(1, PLAY + 1, W - 2, 1, 3); rect(1, H - 2, W - 2, 1, 3); rect(1, PLAY + 1, 1, H - PLAY - 2, 3); rect(W - 2, PLAY + 1, 1, H - PLAY - 2, 3);
+  rect(3, PLAY + 3, W - 6, 1, 1); rect(3, H - 4, W - 6, 1, 1); rect(3, PLAY + 3, 1, H - PLAY - 6, 1); rect(W - 4, PLAY + 3, 1, H - PLAY - 6, 1);
+  if (state.paused) { text('PAUSE', W / 2 - 15, PLAY + 16); return; }
+  const shown = Math.floor(state.typed);
+  text(LINES[0].slice(0, shown), 10, PLAY + 10);
+  text(LINES[1].slice(0, Math.max(0, shown - LINES[0].length)), 10, PLAY + 22);
+  if (shown >= STOPS[2] && Math.floor(clock * 2.5) % 2) { rect(147, PLAY + 31, 5, 1, 3); rect(148, PLAY + 32, 3, 1, 3); put(149, PLAY + 33, 3); }
+}
+
+/* LCD ghosting: each frame is laid over the last one at partial strength. */
+const frameCanvas = document.createElement('canvas');
+frameCanvas.width = W; frameCanvas.height = H;
+const fctx = frameCanvas.getContext('2d');
+const img = fctx.createImageData(W, H);
+function present(alpha) {
+  const d = img.data;
+  for (let i = 0; i < buf.length; i++) { const c = colours[buf[i]]; d[i * 4] = c[0]; d[i * 4 + 1] = c[1]; d[i * 4 + 2] = c[2]; d[i * 4 + 3] = 255; }
+  fctx.putImageData(img, 0, 0);
+  out.globalAlpha = alpha;
+  out.drawImage(frameCanvas, 0, 0);
+  out.globalAlpha = 1;
+}
+
+/* ---------- input ---------- */
+const actions = {
+  a: jump, b: jump,
+  start: () => { state.paused = !state.paused; },
+  select: () => { palette = (palette + 1) % PALETTES.length; colours = PALETTES[palette].map(rgb); },
+  left: () => { state.speed = Math.max(24, state.speed - 12); },
+  right: () => { state.speed = Math.min(96, state.speed + 12); },
+  up: () => {}, down: () => {},
+};
+document.querySelectorAll('[data-key]').forEach((b) => {
+  const key = b.dataset.key;
+  b.addEventListener('pointerdown', (e) => { e.preventDefault(); b.classList.add('down'); actions[key](); if (reduce) still(); });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => b.addEventListener(ev, () => b.classList.remove('down')));
+  b.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); actions[key](); if (reduce) still(); } });
+});
+const KEYS = { z: 'a', ' ': 'a', x: 'b', Enter: 'start', Shift: 'select', ArrowLeft: 'left', ArrowRight: 'right' };
+addEventListener('keydown', (e) => {
+  const key = KEYS[e.key] || KEYS[e.key.toLowerCase()];
+  if (!key || e.repeat || (e.target.closest && e.target.closest('button'))) return;
+  e.preventDefault();
+  actions[key]();
+  const b = document.querySelector(`[data-key="${key}"]`);
+  if (b) { b.classList.add('down'); setTimeout(() => b.classList.remove('down'), 120); }
+  if (reduce) still();
+});
+
+/* ---------- run ---------- */
+function still() {
+  // One frame with the fox over the dog and the whole line typed.
+  state.cam = DOG_FIRST - FOX_X - 10; state.dog = 0; state.y = -30; state.typed = STOPS[2]; state.phase = 3;
+  draw(); present(1);
+}
+if (reduce) { still(); return; }
+let last = 0, first = true;
+function tick(now) {
+  const dt = last ? Math.min((now - last) / 1000, 0.05) : 0;
+  last = now;
+  update(dt);
+  draw();
+  present(first ? 1 : 0.55);
+  first = false;
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
