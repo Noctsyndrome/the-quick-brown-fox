@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quick Brown Fox Terminal ASCII</title>
+<meta name="description" content="The quick brown fox jumps over the lazy dog, as ASCII art in a shell session.">
+<style>
+
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:400;font-display:swap;src:url(/the-quick-brown-fox-jumps-over-the-lazy-dog/assets/fonts/ibm-plex-mono-400.woff2) format('woff2')}
+:root{
+  --bg:#101216;--fg:#c8ccd4;--mu:#5c6370;--bloom:38%;
+  --fox:#e8914a;--fox2:#f3e6d4;--fox3:#b07448;--fox4:#5e4433;--dog:#c9bba4;--z:#7f9cc9;
+  --tree:#3d7650;--trunk:#7a5c43;--star:#8b93a1;--moon:#e8c97a;--fly:#e8e27a;
+  --grass:#5f9157;--dirt:#4e453d;--user:#98c379;--path:#61afef;--err:#e06c75;
+}
+:root[data-theme="green"]{
+  --bg:#06100a;--fg:#5cf08a;--mu:#2a7a45;--bloom:75%;
+  --fox:#c8ffd4;--fox2:#ffffff;--fox3:#5cf08a;--fox4:#1f6b39;--dog:#5cf08a;--z:#3fbf68;
+  --tree:#1f6b39;--trunk:#1a5a30;--star:#2f8a50;--moon:#9dffb8;--fly:#c8ffd4;
+  --grass:#2f9a55;--dirt:#174d2b;--user:#9dffb8;--path:#5cf08a;--err:#c8ffd4;
+}
+:root[data-theme="amber"]{
+  --bg:#130b02;--fg:#ffb641;--mu:#8a5a14;--bloom:70%;
+  --fox:#ffe3a8;--fox2:#fff6e0;--fox3:#ffb641;--fox4:#7a4c0e;--dog:#ffb641;--z:#c98a2a;
+  --tree:#7a4c0e;--trunk:#6a400c;--star:#9a6418;--moon:#ffd27a;--fly:#ffe3a8;
+  --grass:#a8701a;--dirt:#5a3a0a;--user:#ffd27a;--path:#ffb641;--err:#ffe3a8;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#0c0c0e;color:var(--fg);overflow:hidden}
+body{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;display:grid;place-items:center;padding:56px 16px 24px;height:100dvh}
+.back{position:fixed;top:16px;left:16px;z-index:3;width:26px;height:26px;display:grid;place-items:center;border:1.5px solid #4a4d55;border-radius:50%;color:#c8ccd4;text-decoration:none}
+.back:hover,.back:focus-visible{border-color:#c8ccd4;outline:none}
+:root{--bez:clamp(8px,1.6vw,18px);--radius:clamp(12px,2.2vw,28px);--w:640px;--h:480px;--fs:14px;--ft:14px}
+.monitor{padding:var(--bez);border-radius:calc(var(--radius) + var(--bez) * .7);background:linear-gradient(#1d1e22,#151619);box-shadow:inset 0 1px 0 #ffffff10,inset 0 -2px 0 #0000008c,0 0 0 1px #000,0 28px 60px -28px #000}
+.crt{position:relative;width:var(--w);height:var(--h);border-radius:var(--radius);overflow:hidden;background:#000}
+.screen{position:absolute;inset:0;overflow:hidden;background:var(--bg);transition:background .2s;animation:flicker 4s steps(1) infinite}
+.screen.bent{filter:url(#barrel)}
+.glass{position:absolute;inset:0;pointer-events:none;z-index:2;border-radius:inherit;
+  background:
+    radial-gradient(ellipse 120% 90% at 50% 45%,transparent 55%,#0000008c 100%),
+    repeating-linear-gradient(to bottom,#ffffff05 0 1px,#00000038 1px 3px);
+  box-shadow:inset 0 0 50px #000000b3,inset 0 0 6px #000}
+.glass::after{content:"";position:absolute;left:0;right:0;top:-30%;height:30%;background:linear-gradient(to bottom,transparent,color-mix(in srgb,var(--fg) 5%,transparent),transparent);animation:roll 9s linear infinite}
+@keyframes roll{to{transform:translateY(433%)}}
+@keyframes flicker{0%{opacity:1}31%{opacity:.985}32%{opacity:1}67%{opacity:.975}68%{opacity:1}}
+main{
+  height:100%;display:flex;flex-direction:column;
+  max-width:var(--mw);margin:0 auto;
+  padding:calc(var(--ft) * 1.2) calc(var(--fs) * 1.2);
+  font-size:var(--ft);line-height:1.2;
+  text-shadow:0 0 1px color-mix(in srgb,currentColor 70%,transparent),0 0 7px color-mix(in srgb,currentColor var(--bloom),transparent);
+  cursor:text;
+}
+
+.line{white-space:pre-wrap;word-break:break-word;min-height:1.2em}
+.scene{margin:calc(var(--ft) * 1.2) 0;font-family:inherit;font-size:var(--fs);line-height:1.2;white-space:pre;overflow:hidden;flex:none;user-select:none;-webkit-user-select:none}
+.cmd{flex:1;min-height:0;overflow:hidden;margin-top:calc(var(--ft) * 1.2)}
+.scene,.scene *{font-variant-ligatures:none}
+.mu{color:var(--mu)}.us{color:var(--user)}.pa{color:var(--path)}.er{color:var(--err)}
+.fx{color:var(--fox)}.fw{color:var(--fox2)}.fk{color:var(--fox3)}.fk2{color:var(--fox4)}.dg{color:var(--dog)}.zz{color:var(--z)}
+.tr{color:var(--tree)}.tk{color:var(--trunk)}.st{color:var(--star)}.mn{color:var(--moon)}.fl{color:var(--fly)}
+.gr{color:var(--grass)}.dt{color:var(--dirt)}
+.say{color:var(--fg)}
+.cur{display:inline-block;width:1ch;height:1.1em;vertical-align:-.2em;background:var(--fg);box-shadow:0 0 6px color-mix(in srgb,var(--fg) var(--bloom),transparent)}
+.cur.hollow{background:none;outline:1px solid var(--fg);outline-offset:-1px}
+.cur.blink{animation:blink 1.06s steps(1) infinite}
+.cur-on{background:var(--fg);color:var(--bg)}
+@keyframes blink{50%{opacity:0}}
+.prompt{position:relative}
+.prompt input{position:absolute;inset:0;width:100%;height:100%;opacity:0;border:0;padding:0;font-size:16px;background:transparent;color:transparent;caret-color:transparent}
+.log .line{color:var(--fg)}
+@media (prefers-reduced-motion:reduce){.cur.blink,.screen,.glass::after{animation:none}.screen{transition:none}}
+</style>
+</head>
+<body>
+<a class="back" href="/the-quick-brown-fox-jumps-over-the-lazy-dog" aria-label="All versions"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" style="display:block"><path d="M11.5 7h-9M6 3 2.5 7 6 11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="barrel" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="0" y="0" width="100" height="100"><feImage id="bmap" result="map" preserveAspectRatio="none" x="0" y="0" width="100" height="100"/><feDisplacementMap in="SourceGraphic" in2="map" scale="0" xChannelSelector="R" yChannelSelector="G"/><feGaussianBlur stdDeviation="0.45"/></filter></svg>
+<div class="monitor" id="monitor">
+<div class="crt">
+<div class="screen" id="screen">
+<main id="term">
+  <h1 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">The quick brown fox jumps over the lazy dog</h1>
+  <div class="line" id="boot"></div>
+  <pre class="scene" id="scene" role="img" aria-label="ASCII art: a fox runs through a night forest and jumps over a sleeping dog." hidden></pre>
+  <div class="line say" id="say" aria-hidden="true"></div>
+  <div class="cmd" id="cmdarea">
+    <div class="log" id="log" aria-live="polite"></div>
+    <div class="line prompt" id="prompt" hidden><span class="us">fox@forest</span>:<span class="pa">~</span>$ <span id="mirror"></span><input id="cmd" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Command"></div>
+  </div>
+</main>
+</div>
+<div class="glass" aria-hidden="true"></div>
+</div>
+</div>
+<script>
+/* ---------- engine ---------- */
+const COLS = 72, ROWS = 16, FEET = 12;
+const sp = (s) => s.split('\n').slice(1, -1);
+const FOX_A = sp(String.raw`
+                /|_/|
+  _.---._______/ .  '-.
+<___..--')        _.-'
+        \ \----/ /
+         \ \  / /
+`);
+const FOX_B = sp(String.raw`
+                /|_/|
+  _.---._______/ .  '-.
+<___..--')        _.-'
+        / /----\ \
+       / /      \ \
+`);
+const FOX_J = sp(String.raw`
+                /|_/|
+  _.---._______/ .  '-.
+<___..--')        _.-'
+       _/ /----\ \_
+`);
+// Each pair of legs is two strokes: the far leg (left stroke) darker, the near leg lighter.
+const FAR_LEG = new Map([[FOX_A, [[8, 15], [9, 14]]], [FOX_B, [[8, 15], [7, 16]]], [FOX_J, [[7, 8, 15]]]]);
+const DOG = sp(String.raw`
+      ______   .--.
+   .-'      '-/ -  \__
+  (__,_______(__\_____o)
+`);
+const PINE = sp(String.raw`
+    ^
+   /^\
+  /^^^\
+ /^^^^^\
+/^^^^^^^\
+   |||
+`);
+const PINE_S = sp(String.raw`
+   ^
+  /^\
+ /^^^\
+/^^^^^\
+  |||
+`);
+const MOON = sp(String.raw`
+ .-.
+(  (
+ '-'
+`);
+const FOX_W = 23, DOG_W = 23, DOG_X = 26, DOG_Y = FEET - 2;
+const TAKEOFF = DOG_X - 21, LAND = DOG_X + 20, JSPAN = LAND - TAKEOFF, JUMP_H = 5;
+const TREES = [[-2, PINE], [6, PINE_S], [58, PINE_S], [63, PINE]];
+const STARS = [[3,0],[13,1],[22,0],[30,2],[37,1],[44,0],[49,3],[2,4],[18,3],[69,3],[26,4],[42,4],[9,2],[33,0],[56,1],[52,0]];
+
+function rng(seed) { return () => (seed = (seed * 16807) % 2147483647) / 2147483647; }
+const GROUND = (() => {
+  const r = rng(7), rows = [];
+  for (let y = 0; y < 3; y++) {
+    let row = '';
+    for (let x = 0; x < COLS; x++) {
+      const v = r();
+      if (y === 0) row += v < .22 ? '"' : v < .42 ? "'" : v < .62 ? ',' : v < .8 ? '.' : '_';
+      else row += v < (y === 1 ? .28 : .12) ? (v < .06 ? ':' : '.') : ' ';
+    }
+    rows.push(row);
+  }
+  return rows;
+})();
+
+const SENT = ['The quick brown fox ', 'jumps over ', 'the lazy dog'];
+
+function makeWorld() {
+  return { tick: 0, x: -FOX_W, idle: 0, wag: 0, zs: [] };
+}
+
+function step(w) {
+  w.tick++;
+  if (w.idle > 0) { if (--w.idle === 0) w.x = -FOX_W; }
+  else {
+    const air = w.x >= TAKEOFF && w.x < LAND;
+    w.x += air ? 2 : 1;
+    if (w.x > COLS + 2) w.idle = 22;
+  }
+  if (w.wag > 0) w.wag--;
+  if (w.tick % 11 === 0) w.zs.push({ x: DOG_X + 17, y: DOG_Y - 1, age: 0 });
+  for (const z of w.zs) { z.age++; if (z.age % 5 === 0) z.y--; if (z.age % 7 === 0) z.x++; }
+  w.zs = w.zs.filter((z) => z.age < 16);
+}
+
+function foxPose(w) {
+  if (w.idle > 0) return null;
+  const x = w.x;
+  if (x >= TAKEOFF && x < LAND) {
+    const t = (x - TAKEOFF) / JSPAN;
+    return { x, lift: Math.round(JUMP_H * Math.sqrt(Math.sin(Math.PI * t))), spr: FOX_J };
+  }
+  return { x, lift: 0, spr: (w.tick >> 1) % 2 ? FOX_A : FOX_B };
+}
+
+function typed(w) {
+  const total = SENT.join('').length;
+  if (w.idle > 0) return total;
+  const x = w.x;
+  const seg = (i, a, b) => SENT.slice(0, i).join('').length + Math.round(SENT[i].length * Math.min(1, Math.max(0, (x - a) / (b - a))));
+  if (x < TAKEOFF) return seg(0, -FOX_W + 2, TAKEOFF);
+  if (x < LAND) return seg(1, TAKEOFF, LAND - 4);
+  return seg(2, LAND, COLS - 6);
+}
+
+function frame(w) {
+  const ch = new Array(COLS * ROWS).fill(' '), cl = new Array(COLS * ROWS).fill('');
+  const put = (x, y, c, k) => { if (x >= 0 && x < COLS && y >= 0 && y < ROWS) { ch[y * COLS + x] = c; cl[y * COLS + x] = k; } };
+  const blit = (spr, x, y, k, kf) => spr.forEach((row, r) => {
+    const a = row.search(/\S/), b = row.trimEnd().length;
+    if (a < 0) return;
+    for (let j = a; j < b; j++) put(x + j, y + r, row[j], kf ? kf(j, r, row[j]) : k);
+  });
+  STARS.forEach(([x, y], i) => {
+    const p = (w.tick + i * 13) % 60;
+    put(x, y, p < 3 ? '*' : p < 6 ? '+' : '.', 'st');
+  });
+  blit(MOON, 60, 0, 'mn');
+  for (const [tx, spr] of TREES) blit(spr, tx, FEET - spr.length + 1, 'tr', (j, r, c) => c === '|' ? 'tk' : 'tr');
+  for (let i = 0; i < 2; i++) {
+    const a = w.tick * (0.07 + i * 0.03) + i * 2;
+    const fx = Math.round((i ? 52 : 9) + Math.sin(a) * 4), fy = Math.round((i ? 6 : 5) + Math.cos(a * 1.3) * 1.5);
+    if ((w.tick + i * 17) % 40 < 28) put(fx, fy, i ? '`' : '.', 'fl');
+  }
+  GROUND.forEach((row, r) => { for (let x = 0; x < COLS; x++) if (row[x] !== ' ') put(x, FEET + 1 + r, row[x], r ? 'dt' : 'gr'); });
+  for (const z of w.zs) put(z.x, z.y, z.age > 8 ? 'Z' : 'z', 'zz');
+  blit(DOG, DOG_X, DOG_Y, 'dg');
+  if (w.wag > 0) put(DOG_X + 1, DOG_Y + 1, '\\|/-'[(w.tick >> 1) % 4], 'dg');
+  const f = foxPose(w);
+  // Tail tip white, legs dark.
+  if (f) blit(f.spr, f.x, FEET - f.spr.length + 1 - f.lift, 'fx',
+    (j, r, c) => r === 2 && j < 3 ? 'fw' : r >= 3 && c !== '-' ? (FAR_LEG.get(f.spr)[r - 3].includes(j) ? 'fk2' : 'fk') : 'fx');
+  return { ch, cl };
+}
+
+function toText(fr) {
+  let s = '';
+  for (let y = 0; y < ROWS; y++) s += fr.ch.slice(y * COLS, y * COLS + COLS).join('') + '\n';
+  return s;
+}
+/*ENGINE-END*/
+
+/* ---------- page ---------- */
+const $ = (id) => document.getElementById(id);
+const esc = (c) => c === '<' ? '&lt;' : c === '>' ? '&gt;' : c === '&' ? '&amp;' : c;
+function toHtml(fr) {
+  let out = '';
+  for (let y = 0; y < ROWS; y++) {
+    let k = null, run = '';
+    for (let x = 0; x < COLS; x++) {
+      const i = y * COLS + x, kk = fr.cl[i];
+      if (kk !== k) { if (run) out += k ? `<span class="${k}">${run}</span>` : run; run = ''; k = kk; }
+      run += esc(fr.ch[i]);
+    }
+    if (run) out += k ? `<span class="${k}">${run}</span>` : run;
+    out += '\n';
+  }
+  return out;
+}
+
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const SPEEDS = { slow: 8, normal: 13, fast: 22 };
+let fps = SPEEDS.normal, world = makeWorld(), running = false, last = 0, acc = 0;
+const sentence = SENT.join('');
+
+function draw() {
+  $('scene').innerHTML = toHtml(frame(world));
+  const n = typed(world);
+  $('say').innerHTML = sentence.slice(0, n) + (n < sentence.length || world.idle > 0 ? '<span class="cur blink"></span>' : '');
+}
+
+function loop(t) {
+  if (!running) return;
+  acc += Math.min(250, t - (last || t)); last = t;
+  const dt = 1000 / fps;
+  let changed = false;
+  while (acc >= dt) { step(world); acc -= dt; changed = true; }
+  if (changed) draw();
+  requestAnimationFrame(loop);
+}
+
+function still() {
+  world = makeWorld();
+  world.x = TAKEOFF + Math.round(JSPAN / 2) - 1;
+  world.tick = 12;
+  world.zs = [{ x: DOG_X + 17, y: DOG_Y - 2, age: 9 }, { x: DOG_X + 18, y: DOG_Y - 4, age: 9 }];
+  $('scene').innerHTML = toHtml(frame(world));
+  $('say').textContent = sentence;
+}
+
+// The tube has a fixed size: 4:3 when there is room, otherwise a tall screen that fills the phone.
+// Plex Mono cells are 0.6em wide and 1.2em tall. The grid is COLS + 4 columns wide and needs about
+// 27 rows (prompt, scene, sentence, a few command lines, margins).
+const CELL = 0.6, GRID_W = (COLS + 4) * CELL, GRID_H = 27 * 1.2;
+function fit() {
+  const bez = parseFloat(getComputedStyle($('monitor')).paddingLeft) || 0;
+  const vh = window.visualViewport ? visualViewport.height : innerHeight;
+  const aw = innerWidth - 32 - bez * 2, ah = vh - 80 - bez * 2;
+  let W = Math.min(aw, ah * 4 / 3, 1000), H = W * 3 / 4;
+  let fs = Math.floor(Math.min(W / GRID_W, H / GRID_H) * 4) / 4, ft = fs;
+  if (fs < 11 && aw < 640) {
+    W = aw; H = Math.max(ah, 320);
+    fs = Math.floor(W / GRID_W * 4) / 4; ft = Math.max(12, fs);
+  }
+  const r = document.documentElement.style;
+  r.setProperty('--w', Math.floor(W) + 'px'); r.setProperty('--h', Math.floor(H) + 'px');
+  r.setProperty('--fs', fs + 'px'); r.setProperty('--ft', ft + 'px');
+  r.setProperty('--mw', Math.ceil(GRID_W * fs) + 'px');
+  bend();
+  snapCmd();
+  toBottom();
+}
+function toBottom() { const c = $('cmdarea'); c.scrollTop = c.scrollHeight; }
+// Show whole lines only: trim the command area to a multiple of the line height.
+function snapCmd() {
+  const c = $('cmdarea');
+  c.style.flex = ''; c.style.height = '';
+  const lh = parseFloat(getComputedStyle(c).lineHeight) || 16, room = c.clientHeight;
+  c.style.flex = 'none';
+  c.style.height = Math.max(lh, Math.floor(room / lh) * lh) + 'px';
+}
+if (window.visualViewport) visualViewport.addEventListener('resize', fit);
+
+// CRT curvature: an SVG displacement map that pulls the edges inward (barrel distortion).
+// WebKit renders feImage-on-HTML unreliably, so it keeps the flat glass.
+const BEND = 0.06;
+const canBend = /Chrome\/|Firefox\//.test(navigator.userAgent) && !/CriOS|FxiOS|EdgiOS/.test(navigator.userAgent);
+let bentSize = '';
+function bend() {
+  const s = $('screen');
+  if (!canBend) return;
+  const W = s.clientWidth, H = s.clientHeight;
+  if (bentSize === W + 'x' + H) return;
+  bentSize = W + 'x' + H;
+  const N = 128, c = document.createElement('canvas');
+  c.width = c.height = N;
+  const g = c.getContext('2d'), img = g.createImageData(N, N);
+  // Same curvature on any aspect ratio: distance is measured against the half-diagonal.
+  const R2 = (W * W + H * H) / 4, scale = Math.max(W, H) * BEND * 1.1;
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    const x = ((i + 0.5) / N - 0.5) * W, y = ((j + 0.5) / N - 0.5) * H, r2 = (x * x + y * y) / R2;
+    const dx = x * BEND * r2, dy = y * BEND * r2, p = (j * N + i) * 4;
+    img.data[p] = Math.round((0.5 + dx / scale) * 255);
+    img.data[p + 1] = Math.round((0.5 + dy / scale) * 255);
+    img.data[p + 2] = 128; img.data[p + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+  const f = $('barrel'), m = $('bmap');
+  for (const el of [f, m]) { el.setAttribute('width', W); el.setAttribute('height', H); }
+  m.setAttribute('href', c.toDataURL());
+  f.querySelector('feDisplacementMap').setAttribute('scale', scale);
+  s.classList.add('bent');
+}
+addEventListener('resize', fit);
+fit();
+
+/* ---------- shell ---------- */
+const input = $('cmd'), mirror = $('mirror'), log = $('log');
+const hist = []; let hi = 0;
+const CMDS = ['help', 'ls', 'cat', 'whoami', 'pet', 'speed', 'theme', 'echo', 'clear', 'exit'];
+
+function print(html, cls) {
+  const d = document.createElement('div');
+  d.className = 'line' + (cls ? ' ' + cls : '');
+  d.innerHTML = html;
+  log.appendChild(d);
+  while (log.children.length > 60) log.firstChild.remove();
+  toBottom();
+}
+const txt = (s) => s.replace(/[<>&]/g, esc);
+
+function setTheme(name) {
+  if (name === 'ansi') document.documentElement.removeAttribute('data-theme');
+  else document.documentElement.setAttribute('data-theme', name);
+  try { localStorage.setItem('qbf-term-theme', name); } catch (e) {}
+}
+try { const t = localStorage.getItem('qbf-term-theme'); if (t === 'green' || t === 'amber') setTheme(t); } catch (e) {}
+
+function run(line) {
+  print(`<span class="us">fox@forest</span>:<span class="pa">~</span>$ ${txt(line)}`);
+  const [cmd, ...args] = line.trim().split(/\s+/);
+  const arg = args.join(' ');
+  switch (cmd) {
+    case '': return;
+    case 'help':
+      print('<span class="mu">ls  cat  whoami  pet  echo  clear  exit</span>');
+      print('<span class="mu">speed slow|normal|fast</span>');
+      print('<span class="mu">theme ansi|green|amber</span>');
+      return;
+    case 'ls': print('pangram.txt  fox  dog  <span class="pa">forest/</span>'); return;
+    case 'cat':
+      if (!arg) print('<span class="mu">usage: cat pangram.txt</span>');
+      else if (arg === 'pangram.txt') print(sentence);
+      else if (arg === 'fox' || arg === 'dog') print(`cat: ${txt(arg)}: Is a ${txt(arg)}`);
+      else print(`cat: ${txt(arg)}: No such file or directory`, 'er');
+      return;
+    case 'whoami': print('the quick brown fox'); return;
+    case 'pet':
+      if (arg === 'fox') { print('the fox is too quick.'); return; }
+      world.wag = 40; print('the lazy dog wags its tail without waking up.'); return;
+    case 'echo': print(txt(arg)); return;
+    case 'speed':
+      if (SPEEDS[arg]) { fps = SPEEDS[arg]; print(`speed: ${arg}`, 'mu'); }
+      else print('<span class="mu">usage: speed slow|normal|fast</span>');
+      return;
+    case 'theme':
+      if (['ansi', 'green', 'amber'].includes(arg)) { setTheme(arg); print(`theme: ${arg}`, 'mu'); }
+      else print('<span class="mu">usage: theme ansi|green|amber</span>');
+      return;
+    case 'clear': log.innerHTML = ''; return;
+    case 'rm': print(`rm: cannot remove '${txt(args[args.length - 1] || '')}': it is asleep`, 'er'); return;
+    case 'sudo': print('fox is not in the sudoers file. This incident will be reported.', 'er'); return;
+    case 'cd':
+      if (arg === '..') { location.href = '/the-quick-brown-fox-jumps-over-the-lazy-dog'; return; }
+      print(arg && arg !== '~' && arg !== 'forest' && arg !== 'forest/' ? `cd: ${txt(arg)}: No such file or directory` : 'you are already deep in the forest.', arg && arg !== '~' && arg !== 'forest' && arg !== 'forest/' ? 'er' : '');
+      return;
+    case 'exit': case 'logout': location.href = '/the-quick-brown-fox-jumps-over-the-lazy-dog'; return;
+    default: print(`bash: ${txt(cmd)}: command not found`, 'er');
+  }
+}
+
+function paint() {
+  const v = input.value, p = input.selectionStart ?? v.length, focused = document.activeElement === input;
+  const at = v[p] ?? ' ';
+  mirror.innerHTML = txt(v.slice(0, p)) +
+    (focused ? `<span class="cur-on">${txt(at)}</span>` : (v[p] ? `<span>${txt(at)}</span>` : '<span class="cur hollow"></span>')) +
+    txt(v.slice(p + 1));
+}
+input.addEventListener('input', paint);
+input.addEventListener('keyup', paint);
+input.addEventListener('focus', paint);
+input.addEventListener('blur', paint);
+document.addEventListener('selectionchange', () => { if (document.activeElement === input) paint(); });
+input.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    const v = input.value; input.value = '';
+    if (v.trim()) { hist.push(v); } hi = hist.length;
+    run(v); paint(); e.preventDefault();
+    toBottom();
+  } else if (e.key === 'ArrowUp' && hist.length) {
+    hi = Math.max(0, hi - 1); input.value = hist[hi]; e.preventDefault(); requestAnimationFrame(() => { input.setSelectionRange(input.value.length, input.value.length); paint(); });
+  } else if (e.key === 'ArrowDown' && hist.length) {
+    hi = Math.min(hist.length, hi + 1); input.value = hist[hi] ?? ''; e.preventDefault(); paint();
+  } else if (e.key === 'Tab') {
+    e.preventDefault();
+    const v = input.value.trimStart();
+    if (!v.includes(' ')) { const m = CMDS.filter((c) => c.startsWith(v)); if (v && m.length === 1) input.value = m[0] + ' '; }
+    else if (/^cat\s+p?a?n?g?r?a?m?\.?t?x?t?$/.test(v)) input.value = 'cat pangram.txt';
+    paint();
+  } else if (e.key === 'l' && e.ctrlKey) { e.preventDefault(); log.innerHTML = ''; }
+});
+$('screen').addEventListener('click', (e) => { if (!e.target.closest('a') && !getSelection().toString()) input.focus({ preventScroll: true }); });
+
+/* ---------- boot ---------- */
+const BOOT_CMD = './quick-brown-fox';
+const PS1 = '<span class="us">fox@forest</span>:<span class="pa">~</span>$ ';
+function start() {
+  $('boot').innerHTML = PS1 + BOOT_CMD;
+  $('scene').hidden = false; $('prompt').hidden = false; draw(); snapCmd();
+  print('<span class="mu">type help for commands</span>');
+  paint();
+  if (matchMedia('(pointer:fine)').matches) input.focus({ preventScroll: true });
+  if (reduce) { still(); return; }
+  draw(); running = true; requestAnimationFrame(loop);
+}
+if (reduce) start();
+else {
+  let i = 0;
+  $('boot').innerHTML = PS1 + '<span class="cur"></span>';
+  const t = setInterval(() => {
+    i++;
+    $('boot').innerHTML = PS1 + BOOT_CMD.slice(0, i) + '<span class="cur"></span>';
+    if (i >= BOOT_CMD.length) { clearInterval(t); setTimeout(start, 380); }
+  }, 55);
+}
+</script>
+</body>
+</html>

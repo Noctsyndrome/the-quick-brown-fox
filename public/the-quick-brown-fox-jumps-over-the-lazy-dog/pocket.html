@@ -174,18 +174,21 @@ function blit(s, x, y, flip = false) {
 
 /* The fox, facing right: pricked ears, long muzzle and dark nose, pale chest, a big brush with a white tip, dark legs. */
 const FOX_TOP = [
-  '..................3..3..',
-  '..................11.11..',
-  '.................111111..',
-  '.................1131111',
-  '..2222..........11110003',
-  '.222222.111111111110000.',
-  '22222221111111111100....',
-  '0022222111111111110.....',
-  '00.22..1111111111.......',
+  '.........................k..k...',
+  '........................k1.k1...',
+  '.......................k11k11...',
+  '........................111111..',
+  '.......................1113111..',
+  '...2222222..11111111111111111113',
+  '.22222222222111111111111110000..',
+  '00222222222211111111110000......',
+  '00022222222.1111111111000.......',
+  '.00222......11111111100.........',
+  '.............1111111............',
 ];
 /* Foreground animals are drawn dark, the scenery behind them light. */
-const FOXMAP = { 0: '0', 1: '2', 2: '2', 3: '3' };
+// 'k' is drawn dark but gets no outline of its own, so the ear tips stay one pixel sharp.
+const FOXMAP = { 0: '0', 1: '2', 2: '2', 3: '3', k: '9' };
 /* Only the body gets an outline; legs hang below it bare, so the gaps between them stay open. */
 function withLegs(body, legRows) {
   const legs = sprite(legRows), w = body.w, h = body.h + legs.h - 1, data = new Uint8Array(w * h).fill(255);
@@ -199,8 +202,8 @@ function withLegs(body, legRows) {
 const FOX_BODY = outlined(sprite(FOX_TOP, FOXMAP));
 // Four legs: the near pair darkest, the far pair a shade lighter.
 const FOX_RUN = [
-  withLegs(FOX_BODY, ['......33.2....2.33......', '.....33..2.....2..33....', '....33..2.......2...33..', '...3...2.........2....3.']),
-  withLegs(FOX_BODY, ['........3.2...2.3.......', '........3.2...2.3.......', '........3.2...2.3.......', '.......33.2..22.33......']),
+  withLegs(FOX_BODY, ['............33.2...2.33.........', '...........33..2....2.33........', '..........33..2......2.33.......', '.........3...2........2..3......']),
+  withLegs(FOX_BODY, ['.............3.2...2.3..........', '.............3.2...2.3..........', '.............3.2...2.3..........', '............33.22..2233.........']),
 ];
 /* The dog, asleep facing left: domed head over a long muzzle, dark nose, eye shut, a floppy ear,
    chin on its front paws, a patch on its back, the curve of its hind leg, tail curled up behind. */

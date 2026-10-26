@@ -194,18 +194,19 @@ const FOX_GATHER = fromRows([
   '.....K....K.....'
 ], FOXPAL);
 const DOGPAL = { W: col('#f6f1e6'), w: col('#d9cfbf'), B: col('#7b5130'), b: col('#a46f40'), K: col('#2a211c'), k: col('#6b5a4a') };
+/* A beagle asleep facing left: tan coat with a dark saddle, a floppy dark ear, white muzzle and paws,
+   chin resting on its front paws, tail up with a white tip. */
 const DOG_REST = [
-  '..............',
-  '.BB...........',
-  'BWWB...WWbb...',
-  'WkWWWWWWbbbWw.',
-  'KWWWWWWWWWWWWw',
-  'wWWWwwwwwwwwww',
-  '.ww....ww..w..'
+  '...bb..........W',
+  '..bbbB.........b',
+  '.bkbBB..BBBBb..b',
+  'WbbbBBbbBBBBBbbb',
+  'KWWbBBbbbbbbbbbb',
+  'WWWWWbbbbbbbbbbw',
+  '.wwww..wwwwwwww.'
 ];
 const DOG_EXHALE = fromRows(DOG_REST, DOGPAL);
-const DOG_INHALE = fromRows(['..............', '.BB....WWb....', 'BWWB..WWWbbb..'].concat(DOG_REST.slice(3)), DOGPAL);
-const DOG_ALERT = fromRows(['.B............', '.BB...........', 'BWWB...WWbb...', 'WKWWWWWWbbbWw.'].concat(DOG_REST.slice(4)), DOGPAL);
+const DOG_INHALE = fromRows(['...bb..........W', '..bbbB..bBBBb..b', '.bkbBB.bBBBBBb.b'].concat(DOG_REST.slice(3)), DOGPAL);
 
 const DEERPAL = { D: col('#a8703f'), d: col('#7d4f2a'), b: col('#5f3c22'), C: col('#efe3c9'), W: col('#f6f1e6'), K: col('#2a211c') };
 const DEER_LEGS = ['.d.d...d.d..', '.d.d...d.d..', '.K.K...K.K..'];
@@ -425,11 +426,9 @@ function draw(t) {
   caption(!fx || fx.x <= 58 || fx.x >= 422 ? -1 : fx.x < DOGX - JUMP ? 0 : fx.x <= DOGX + JUMP ? 1 : 2);
   darken(DOGX + 1, DOGY + 2, 8, 1.6);
   if (fx) darken(fx.x + 1, laneY(fx.x) + 1.5, 6 - fx.h * 0.25, 1.4);
-  const alert = fx && Math.abs(fx.x - DOGX) < 30;
   const dogTop = DOGY + 2 - 6;
   add(DOGY + 2, () => {
-    ctx.drawImage(alert ? DOG_ALERT : Math.sin(t * 1.8) > 0 ? DOG_INHALE : DOG_EXHALE, DOGX - 7, dogTop);
-    if (alert) return;
+    ctx.drawImage(Math.sin(t * 1.8) > 0 ? DOG_INHALE : DOG_EXHALE, DOGX - 8, dogTop);
     for (let i = 0; i < 2; i++) {
       const s = (t * 0.4 + i * 0.5) % 1;
       if (s > 0.85) continue;
