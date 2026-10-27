@@ -354,12 +354,15 @@ function drawDog(t, alert) {
   const toes = (px, py) => ink('keyD', (x) => { x.strokeStyle = '#fff'; x.lineWidth = 1.2; for (const d of [-3, 2]) { x.beginPath(); x.moveTo(...Tf(px + 3, py + d)); x.lineTo(...Tf(px - 3, py + d)); x.stroke(); } });
   figure({ shapes: [{ p: farPaw }], kw: 2.1, fills: [['ochre', 0.3]], after: () => toes(-142, -9) });
 
-  // Ears: rounded triangles, set back in sleep, pricking up when the fox passes.
+  // Ears: a shiba's upright triangles, rooted in the skull and tipped forward over the brow;
+  // they stand a little taller when the fox passes.
   const lift = alert ? 1 : 0;
-  const earPath = (dx, dy) => pathIn((x, y) => Tf(x + dx, y + dy)).M(-82, -57)
-    .C(-80, -66 - lift * 4, -74 + lift * 2, -72 - lift * 8, -64 + lift * 4, -76 - lift * 8)
-    .C(-62 + lift * 2, -72 - lift * 4, -60, -66, -58, -59).Z().p;
-  const innerEar = pathIn(Tf).M(-77, -60).C(-75, -65 - lift * 3, -71 + lift * 2, -69 - lift * 6, -66 + lift * 4, -71 - lift * 7).C(-65, -68, -64, -64, -63, -60).Z().p;
+  const earPath = (dx, dy) => pathIn((x, y) => Tf(x + dx, y + dy)).M(-88, -52)
+    .C(-91, -62 - lift * 2, -92 + lift * 3, -74 - lift * 5, -90 + lift * 4, -85 - lift * 6)
+    .C(-89 + lift * 4, -88 - lift * 6, -86 + lift * 4, -88 - lift * 6, -84 + lift * 4, -86 - lift * 6)
+    .C(-78 + lift * 2, -78 - lift * 4, -70, -66, -62, -57).Z().p;
+  const innerEar = pathIn(Tf).M(-85, -58).C(-87, -65 - lift * 2, -87 + lift * 3, -73 - lift * 4, -86 + lift * 4, -80 - lift * 5)
+    .C(-81 + lift * 2, -74 - lift * 3, -76, -66, -70, -59).Z().p;
   figure({ shapes: [{ p: earPath(12, -2) }], kw: 2, fills: [['usuD', 1]], after: () => ink('keyD', (x) => { x.save(); x.clip(earPath(12, -2)); x.fillStyle = white(0.55); x.fillRect(DOG_X - 90, G - 110, 60, 60); x.restore(); }) });
 
   // Head: a wedge with a short muzzle; black cap, tan brows (maro-mayu), white cheeks.
@@ -369,7 +372,7 @@ function drawDog(t, alert) {
   // Body and tail.
   const body = pathIn(T).M(-46, -30).C(-50, -58, -18, -67, 22, -63).C(62, -60, 97, -50, 97, -22).C(97, -4, 84, 2, 60, 2).L(-30, 2).C(-44, 2, -48, -14, -46, -30).Z().p;
   const tail = pathIn(T).M(88, -48).C(106, -72, 88, -96, 64, -86).C(50, -80, 54, -66, 68, -64).p;
-  figure({ shapes: [{ p: body }, { p: tail, w: 15 }, { p: head }, { p: nearPaw }], kw: 2.4,
+  figure({ shapes: [{ p: body }, { p: tail, w: 15 }, { p: head }, { p: nearPaw }, { p: earPath(0, 0) }], kw: 2.4,
     after: () => {
       const saddle = new Path2D(); saddle.addPath(body); saddle.addPath(tail);
       // Black saddle over the back, softening into tan along the flank.
@@ -414,12 +417,14 @@ function drawDog(t, alert) {
       for (let i = 0; i < 3; i++) { x.beginPath(); x.moveTo(...Tf(-56 + i * 4, -20 - i * 3)); x.lineTo(...Tf(-50 + i * 4, -18 - i * 3)); x.stroke(); }
     });
   }
-  figure({ shapes: [{ p: earPath(0, 0) }], kw: 2.2, fills: [['usuD', 1]], after: () => {
-    ink('keyD', (x) => { x.save(); x.clip(earPath(0, 0)); x.fillStyle = white(0.5); x.fillRect(DOG_X - 100, G - 110, 60, 60); x.globalCompositeOperation = 'destination-out'; x.fill(innerEar); x.restore(); });
+  // The near ear shares the head's outline; black outside, cream within.
+  {
+    ink('usuD', (x) => { x.fillStyle = white(1); x.fill(earPath(0, 0)); });
+    ink('keyD', (x) => { x.save(); x.clip(earPath(0, 0)); x.fillStyle = white(0.5); x.fillRect(DOG_X - 110, G - 110, 70, 60); x.globalCompositeOperation = 'destination-out'; x.fill(innerEar); x.restore(); });
     ink('usuD', (x) => { x.globalCompositeOperation = 'destination-out'; x.fill(innerEar); });
     ink('ochre', (x) => { x.fillStyle = white(0.45); x.fill(innerEar); });
-    ink('keyD', (x) => { x.strokeStyle = '#fff'; x.lineWidth = 1.1; for (let i = 0; i < 2; i++) { x.beginPath(); x.moveTo(...Tf(-73 + i * 5, -60)); x.lineTo(...Tf(-70 + i * 4, -66 - lift * 3)); x.stroke(); } });
-  } });
+    ink('keyD', (x) => { x.strokeStyle = '#fff'; x.lineWidth = 1.1; for (let i = 0; i < 2; i++) { x.beginPath(); x.moveTo(...Tf(-82 + i * 5, -60)); x.lineTo(...Tf(-83 + i * 4, -67 - lift * 3)); x.stroke(); } });
+  }
 }
 
 /* ---------- fox fires: carved out of the night, printed pale yellow with a warm edge ---------- */
