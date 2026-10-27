@@ -1,0 +1,806 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quick Brown Fox Ukiyo-e</title>
+<style>
+@font-face{font-family:'Yuji Syuku';font-style:normal;font-weight:400;font-display:block;src:url(/the-quick-brown-fox-jumps-over-the-lazy-dog/assets/fonts/yuji-syuku-400.woff2) format('woff2')}
+@font-face{font-family:'Shippori Mincho';font-style:normal;font-weight:500;font-display:block;src:url(/the-quick-brown-fox-jumps-over-the-lazy-dog/assets/fonts/shippori-mincho-500.woff2) format('woff2')}
+:root{--wall:#1c1d22;--dim:#4a4c55;--fg:#d8d2c4}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--wall)}
+/* One explicit row: elements that extensions append to <body> get empty implicit rows and cannot shift the print. */
+body{min-height:100vh;min-height:100dvh;display:grid;grid-template-rows:1fr;place-items:center;padding:56px 16px 32px;overflow:hidden}
+.back{position:fixed;top:16px;left:16px;z-index:3;width:26px;height:26px;display:grid;place-items:center;border:1.5px solid var(--dim);border-radius:50%;color:var(--fg);text-decoration:none}
+.back:hover,.back:focus-visible{border-color:var(--fg);outline:none}
+.sheet{position:relative;width:min(100%,1500px);width:min(100%,calc((100vh - 88px) * 1.5),1500px);width:min(100%,calc((100dvh - 88px) * 1.5),1500px);aspect-ratio:3/2;box-shadow:0 1px 0 #ffffff0d,0 30px 60px -30px #000}
+.sheet canvas{position:absolute;inset:0;display:block;width:100%;height:100%}
+/* The publisher's seal in the corner of the print is a link home. */
+.hanmoto{position:absolute;border-radius:50%}
+.hanmoto:focus-visible{outline:2px solid #efc04a;outline-offset:3px}
+</style>
+</head>
+<body>
+<a class="back" href="/the-quick-brown-fox-jumps-over-the-lazy-dog" aria-label="All versions"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" style="display:block"><path d="M11.5 7h-9M6 3 2.5 7 6 11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+<div class="sheet">
+  <canvas id="print" role="img" aria-label="A woodblock print in the style of Hiroshige: on a snowy winter night, beneath a great bare tree and a deep blue sky, a brown fox carrying fox fires leaps over a white dog asleep on a straw mat. A red title strip reads, in Japanese, the quick brown fox jumps over the lazy dog."></canvas>
+  <a class="hanmoto" id="hanmoto" href="https://www.denkibrew.com/" title="Dennki Brewing" aria-label="Dennki Brewing"></a>
+</div>
+<script>
+(() => {
+'use strict';
+/* The print is laid out on a 1500 x 1000 sheet (a horizontal oban). */
+const LW = 1500, LH = 1000, FPS = 12, CYCLE = 6.4, G = 862, HZ = 560;
+const IMG = { x: 42, y: 42, w: 1416, h: 916 };
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const params = new URLSearchParams(location.search);
+const frozen = params.has('t') ? Number(params.get('t')) : (reduce ? 2.15 : null);
+
+const sheet = document.querySelector('.sheet');
+const view = document.getElementById('print');
+
+function rng(seed) {
+  return () => {
+    seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+const lerp = (a, b, t) => a + (b - a) * t;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const white = (a) => `rgba(255,255,255,${a})`;
+
+/* ---------- plates ----------
+   Each colour block is a canvas holding only coverage, in alpha: white where the block prints.
+   The print shader stacks them on paper like pigments. */
+let W = 0, H = 0, K = 1;
+function canvas() { const c = document.createElement('canvas'); return { c, x: c.getContext('2d') }; }
+const NAMES = ['blue', 'ai', 'usu', 'shu', 'key', 'gof', 'ochre', 'keyD', 'ki', 'gofD', 'ko', 'usuD'];
+const PL = {};
+NAMES.forEach((n) => { PL[n] = canvas(); });
+const packs = { S1: canvas(), S2: canvas(), D1: canvas(), D2: canvas() };
+const PACKS = { S1: ['blue', 'ai', 'usu'], S2: ['shu', 'key', 'gof'], D1: ['ochre', 'keyD', 'ki'], D2: ['gofD', 'ko', 'usuD'] };
+const tint = canvas();
+const tmp = [canvas(), canvas(), canvas()];
+
+function sizeAll() {
+  const r = sheet.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = Math.round(clamp(r.width * dpr, 600, 2400));
+  if (w === W) return false;
+  W = w; H = Math.round(w * LH / LW); K = W / LW;
+  [...Object.values(PL), ...Object.values(packs), tint].forEach((p) => { p.c.width = W; p.c.height = H; });
+  view.width = W; view.height = H;
+  placeLink();
+  return true;
+}
+function logical(x) { x.setTransform(K, 0, 0, K, 0, 0); }
+function clear(p) { p.x.setTransform(1, 0, 0, 1, 0, 0); p.x.globalCompositeOperation = 'source-over'; p.x.globalAlpha = 1; p.x.clearRect(0, 0, W, H); logical(p.x); }
+function pack(name) {
+  const dst = packs[name].x;
+  dst.setTransform(1, 0, 0, 1, 0, 0);
+  dst.globalCompositeOperation = 'source-over';
+  dst.fillStyle = '#000'; dst.fillRect(0, 0, W, H);
+  PACKS[name].forEach((n, i) => {
+    const t = tint.x;
+    t.setTransform(1, 0, 0, 1, 0, 0);
+    t.globalCompositeOperation = 'copy';
+    t.drawImage(PL[n].c, 0, 0);
+    t.globalCompositeOperation = 'source-in';
+    t.fillStyle = ['#f00', '#0f0', '#00f'][i];
+    t.fillRect(0, 0, W, H);
+    dst.globalCompositeOperation = 'lighter';
+    dst.drawImage(tint.c, 0, 0);
+  });
+  dst.globalCompositeOperation = 'source-over';
+}
+
+/* ---------- shapes ---------- */
+// A limb segment: the hull of two circles.
+function capsule(p, ax, ay, ra, bx, by, rb) {
+  const dx = bx - ax, dy = by - ay, d = Math.hypot(dx, dy);
+  if (d < 1e-3 || d <= Math.abs(ra - rb)) { const [x, y, r] = ra > rb ? [ax, ay, ra] : [bx, by, rb]; p.moveTo(x + r, y); p.arc(x, y, r, 0, Math.PI * 2); return p; }
+  const th = Math.atan2(dy, dx), a = Math.acos(clamp((ra - rb) / d, -1, 1));
+  p.moveTo(ax + ra * Math.cos(th + a), ay + ra * Math.sin(th + a));
+  p.arc(ax, ay, ra, th + a, th + Math.PI * 2 - a);
+  p.lineTo(bx + rb * Math.cos(th - a), by + rb * Math.sin(th - a));
+  p.arc(bx, by, rb, th - a, th + a);
+  p.closePath();
+  return p;
+}
+function pathIn(T) {
+  const p = new Path2D();
+  return {
+    p,
+    M(x, y) { p.moveTo(...T(x, y)); return this; },
+    L(x, y) { p.lineTo(...T(x, y)); return this; },
+    Q(a, b, x, y) { p.quadraticCurveTo(...T(a, b), ...T(x, y)); return this; },
+    C(a, b, c, d, x, y) { p.bezierCurveTo(...T(a, b), ...T(c, d), ...T(x, y)); return this; },
+    Z() { p.closePath(); return this; },
+  };
+}
+
+/* ---------- figures: fill blocks, a knockout and a key-block outline per group ---------- */
+let box = { x: 0, y: 0, px: 0, py: 0, pw: 1, ph: 1 };
+function setBox(x, y, w, h) {
+  const px = Math.max(0, Math.floor(x * K)), py = Math.max(0, Math.floor(y * K));
+  const pw = Math.min(W, Math.ceil((x + w) * K)) - px, ph = Math.min(H, Math.ceil((y + h) * K)) - py;
+  box = { px, py, pw: Math.max(1, pw), ph: Math.max(1, ph) };
+  tmp.forEach((t) => {
+    if (t.c.width < box.pw || t.c.height < box.ph) { t.c.width = Math.max(t.c.width, box.pw); t.c.height = Math.max(t.c.height, box.ph); }
+  });
+}
+function tclear(t) {
+  t.x.setTransform(1, 0, 0, 1, 0, 0); t.x.globalCompositeOperation = 'source-over'; t.x.globalAlpha = 1;
+  t.x.clearRect(0, 0, box.pw, box.ph);
+  t.x.setTransform(K, 0, 0, K, -box.px, -box.py);
+}
+function blit(plate, t, op = 'source-over', alpha = 1) {
+  const x = PL[plate].x;
+  x.save(); x.setTransform(1, 0, 0, 1, 0, 0);
+  x.globalCompositeOperation = op; x.globalAlpha = alpha;
+  x.drawImage(t.c, 0, 0, box.pw, box.ph, box.px, box.py, box.pw, box.ph);
+  x.restore();
+}
+function silhouette(t, shapes, grow = 0) {
+  tclear(t);
+  const x = t.x;
+  x.fillStyle = '#fff'; x.strokeStyle = '#fff'; x.lineCap = 'round'; x.lineJoin = 'round';
+  for (const s of shapes) {
+    if (s.w) { x.lineWidth = s.w + grow * 2; x.stroke(s.p); }
+    else { x.fill(s.p); if (grow) { x.lineWidth = grow * 2; x.stroke(s.p); } }
+  }
+}
+const FIG_PLATES = ['ochre', 'ki', 'usuD'];
+/* g: { shapes, kw (outline width), fills: [[plate, alpha | fn(ctx) -> style]], after(ctx) } */
+function figure(g, keyPlate = 'keyD', koPlate = 'ko', occlude = FIG_PLATES) {
+  const [A, B, C] = tmp;
+  silhouette(A, g.shapes);
+  silhouette(B, g.shapes, g.kw ?? 2.4);
+  B.x.save(); B.x.setTransform(1, 0, 0, 1, 0, 0); B.x.globalCompositeOperation = 'destination-out'; B.x.drawImage(A.c, 0, 0); B.x.restore();
+  occlude.forEach((n) => blit(n, A, 'destination-out'));
+  blit(keyPlate, A, 'destination-out');
+  if (koPlate) blit(koPlate, A);
+  for (const [plate, v] of g.fills || []) {
+    if (typeof v === 'number') blit(plate, A, 'source-over', v);
+    else {
+      tclear(C); C.x.drawImage(A.c, 0, 0, box.pw, box.ph, box.px / K, box.py / K, box.pw / K, box.ph / K);
+      C.x.globalCompositeOperation = 'source-in'; C.x.fillStyle = v(C.x); C.x.fillRect(-10, -10, LW + 20, LH + 20);
+      blit(plate, C);
+    }
+  }
+  if (g.kw !== 0) blit(keyPlate, B);
+  if (g.after) g.after();
+}
+// Strokes and fills straight onto a plate, in sheet units.
+function ink(plate, fn) { const x = PL[plate].x; x.save(); logical(x); x.lineCap = 'round'; x.lineJoin = 'round'; fn(x); x.restore(); }
+
+/* ---------- the fox ---------- */
+/* Angles: 0 points straight down, positive swings forward (the fox faces right). */
+const POSES = {
+  run1: { tilt: 0.03, arch: -2, st: 1.08, head: 0.02, tail: 0.12, curl: 0.25, nf: [1.0, 1.25, 1.9], ff: [0.75, 0.95, 1.8], nh: [-0.55, -1.2, -1.15, -0.5], fh: [-0.75, -1.35, -1.3, -0.7] },
+  run2: { tilt: -0.04, arch: 6, st: 0.96, head: 0.1, tail: 0.28, curl: 0.5, nf: [0.1, -0.7, -0.2], ff: [-0.2, -1.0, -0.5], nh: [-0.1, -0.95, -0.55, 0.2], fh: [-0.3, -1.1, -0.8, 0] },
+  run3: { tilt: -0.02, arch: 9, st: 0.9, head: 0.14, tail: 0.32, curl: 0.55, nf: [-0.5, -0.9, -0.3], ff: [-0.25, -0.7, 0.2], nh: [0.9, 0.0, 0.5, 1.3], fh: [0.7, -0.15, 0.35, 1.2] },
+  run4: { tilt: 0.0, arch: 3, st: 1.0, head: 0.06, tail: 0.2, curl: 0.4, nf: [0.45, 0.3, 1.5], ff: [0.25, 0.05, 1.4], nh: [0.45, -0.55, 0.0, 1.0], fh: [0.2, -0.8, -0.25, 0.8] },
+  crouch: { tilt: -0.12, arch: 12, st: 0.88, head: -0.12, tail: 0.35, curl: 0.5, nf: [-0.35, 0.5, 1.5], ff: [-0.15, 0.6, 1.5], nh: [1.15, -1.0, 0.35, 1.3], fh: [1.0, -1.1, 0.25, 1.3] },
+  takeoff: { tilt: 0.4, arch: -2, st: 1.06, head: 0.15, tail: 0.25, curl: 0.3, nf: [1.2, 0.2, 1.2], ff: [1.0, -0.2, 0.8], nh: [-0.7, -1.3, -1.5, -1.6], fh: [-0.5, -1.15, -1.3, -1.4] },
+  flight: { tilt: 0.04, arch: -6, st: 1.1, head: 0.04, tail: 0.3, curl: 0.25, nf: [1.05, -0.35, 0.7], ff: [0.85, -0.6, 0.4], nh: [-0.7, -1.25, -1.05, -0.6], fh: [-0.45, -1.05, -0.8, -0.3] },
+  reach: { tilt: -0.32, arch: 2, st: 1.04, head: -0.12, tail: 0.4, curl: 0.3, nf: [0.6, 0.35, 1.3], ff: [0.85, 0.65, 1.4], nh: [0.5, -0.9, -0.2, 0.6], fh: [0.3, -1.0, -0.4, 0.4] },
+  land: { tilt: -0.16, arch: 8, st: 0.9, head: -0.05, tail: 0.5, curl: 0.45, nf: [0.12, -0.15, 1.4], ff: [0.32, 0.1, 1.45], nh: [0.65, -0.45, 0.3, 1.0], fh: [0.45, -0.65, 0.15, 1.0] },
+};
+const RUN = ['run1', 'run2', 'run3', 'run4'];
+function mix(a, b, t) {
+  const o = {};
+  for (const k in a) o[k] = Array.isArray(a[k]) ? a[k].map((v, i) => lerp(v, b[k][i], t)) : lerp(a[k], b[k], t);
+  return o;
+}
+const FRONT = [36, 36, 13], FRONT_R = [12, 6.5, 5, 4.6];
+const HIND = [40, 38, 30, 11], HIND_R = [19, 9, 6, 5, 4.4];
+function legChain(x, y, angles, lens, radii) {
+  const pts = [[x, y]];
+  angles.forEach((a, i) => { x += Math.sin(a) * lens[i]; y += Math.cos(a) * lens[i]; pts.push([x, y]); });
+  return { pts, radii };
+}
+function foxRig(pose, X, air) {
+  const A = -pose.tilt, c = Math.cos(A), s = Math.sin(A), st = pose.st;
+  const R = (x, y) => [x * c - y * s, x * s + y * c];
+  const Bd = (x, y) => R(x * st, y);
+  const legs = {
+    ff: legChain(...Bd(34, 2), pose.ff, FRONT, FRONT_R),
+    fh: legChain(...Bd(-48, 0), pose.fh, HIND, HIND_R),
+    nf: legChain(...Bd(42, 4), pose.nf, FRONT, FRONT_R),
+    nh: legChain(...Bd(-56, 2), pose.nh, HIND, HIND_R),
+  };
+  let low = -Infinity;
+  for (const l of Object.values(legs)) for (const [, y] of l.pts) low = Math.max(low, y + 4);
+  const tx = X, ty = G - air - low;
+  const T = (x, y) => { const [u, v] = Bd(x, y); return [u + tx, v + ty]; };
+  const hc = Math.cos(-pose.head), hs = Math.sin(-pose.head);
+  const N = [60, -30];
+  const TH = (x, y) => { const [u, v] = R(N[0] * st + x * hc - y * hs, N[1] + x * hs + y * hc); return [u + tx, v + ty]; };
+  const TT = (x, y) => { const [u, v] = R(-76 * st + x, -8 + y); return [u + tx, v + ty]; };
+  for (const l of Object.values(legs)) l.pts = l.pts.map(([x, y]) => [x + tx, y + ty]);
+  return { T, TH, TT, legs, pose, ground: ty + low };
+}
+function legPath(l) {
+  const p = new Path2D();
+  for (let i = 0; i < l.pts.length - 1; i++) capsule(p, ...l.pts[i], l.radii[i], ...l.pts[i + 1], l.radii[i + 1]);
+  return p;
+}
+function lowerLegPath(l, from) {
+  const p = new Path2D();
+  const [ax, ay] = l.pts[from], [bx, by] = l.pts[from + 1];
+  const m = [lerp(ax, bx, 0.45), lerp(ay, by, 0.45)];
+  capsule(p, ...m, lerp(l.radii[from], l.radii[from + 1], 0.45) + 0.4, bx, by, l.radii[from + 1] + 0.4);
+  for (let i = from + 1; i < l.pts.length - 1; i++) capsule(p, ...l.pts[i], l.radii[i] + 0.4, ...l.pts[i + 1], l.radii[i + 1] + 0.4);
+  return p;
+}
+function tailPaths(rig) {
+  const { pose, TT } = rig;
+  const ang = pose.tail, L = 128, dir = [-Math.cos(ang), -Math.sin(ang)], perp = [dir[1], -dir[0]];
+  const flip = perp[1] > 0 ? -1 : 1;
+  const P0 = [0, 0], P2 = [dir[0] * L, dir[1] * L + 6];
+  const P1 = [dir[0] * L * 0.5 + perp[0] * flip * pose.curl * 38, dir[1] * L * 0.5 + perp[1] * flip * pose.curl * 38];
+  const pt = (t) => [(1 - t) ** 2 * P0[0] + 2 * (1 - t) * t * P1[0] + t * t * P2[0], (1 - t) ** 2 * P0[1] + 2 * (1 - t) * t * P1[1] + t * t * P2[1]];
+  const N = 16, left = [], right = [];
+  for (let i = 0; i <= N; i++) {
+    const t = i / N, a = pt(Math.max(0, t - 0.01)), b = pt(Math.min(1, t + 0.01));
+    const dx = b[0] - a[0], dy = b[1] - a[1], d = Math.hypot(dx, dy) || 1, nx = -dy / d, ny = dx / d;
+    const w = (t < 1 ? 11 + 18 * Math.pow(Math.sin(Math.PI * Math.min(1, t * 1.02 + 0.08)), 0.75) : 0) * (1 - 0.25 * t);
+    const c = pt(t);
+    left.push([c[0] + nx * w, c[1] + ny * w]); right.push([c[0] - nx * w, c[1] - ny * w]);
+  }
+  const outline = (from, to) => {
+    const p = pathIn(TT);
+    p.M(...left[from]);
+    for (let i = from + 1; i <= to; i++) p.L(...left[i]);
+    for (let i = to; i >= from; i--) p.L(...right[i]);
+    return p.Z().p;
+  };
+  return { all: outline(0, N), tip: outline(Math.round(N * 0.74), N), mid: pt(0.5), end: pt(1), left, right };
+}
+function drawFox(rig) {
+  const { T, TH, legs, pose } = rig;
+  const arch = pose.arch;
+  const torso = pathIn(T).M(-82, -2)
+    .C(-76, -30 - arch, -10, -34 - arch * 1.2, 44, -27)
+    .C(68, -22, 76, 8, 56, 32)
+    .C(32, 40, 6, 27, -24, 21)
+    .C(-54, 34, -90, 28, -82, -2).Z().p;
+  const neck = pathIn((x, y) => (x > 1000 ? TH(x - 2000, y) : T(x, y)))
+    .M(28, -25).Q(40, -40, 2000 - 6, -16).L(2000 + 2, 16).Q(2000 - 4, 30, 62, 30).Z().p;
+  const head = pathIn(TH).M(-8, -16)
+    .C(4, -27, 24, -24, 34, -13)
+    .C(44, -9, 54, -5, 62, -2)
+    .C(62, 4, 52, 7, 40, 8)
+    .C(28, 14, 10, 21, -4, 16)
+    .C(-16, 10, -18, -8, -8, -16).Z().p;
+  const ear = (dx) => pathIn(TH).M(-2 + dx, -16).L(2 + dx, -46).L(16 + dx, -19).Z().p;
+  const tail = tailPaths(rig);
+  // Far legs, a shade lighter.
+  figure({ shapes: [{ p: legPath(legs.fh) }, { p: legPath(legs.ff) }], fills: [['ochre', 0.62]],
+    after: () => { const p = new Path2D(); p.addPath(lowerLegPath(legs.fh, 1)); p.addPath(lowerLegPath(legs.ff, 1)); ink('usuD', (x) => { x.fillStyle = white(0.95); x.fill(p); }); } });
+  figure({ shapes: [{ p: tail.all }], fills: [['ochre', (x) => { const [a, b] = rig.TT(0, -20), [c, d] = rig.TT(...tail.end); const g = x.createLinearGradient(a, b, c, d); g.addColorStop(0, white(1)); g.addColorStop(1, white(0.7)); return g; }]],
+    after: () => {
+      ink('ochre', (x) => { x.globalCompositeOperation = 'destination-out'; x.fill(tail.tip); });
+      // Fur lines where the white tip begins.
+      ink('keyD', (x) => {
+        x.strokeStyle = '#fff'; x.lineWidth = 1.6;
+        const i = Math.round(16 * 0.74);
+        for (const side of [tail.left, tail.right]) {
+          const [px, py] = rig.TT(...side[i]); const [qx, qy] = rig.TT(...side[i + 1]);
+          x.beginPath(); x.moveTo(px, py); x.lineTo(lerp(px, qx, 0.4) + (qy - py) * 0.12, lerp(py, qy, 0.4) - (qx - px) * 0.12); x.stroke();
+        }
+        const [a, b] = rig.TT(...tail.left[i]), [c, d] = rig.TT(...tail.right[i]);
+        x.beginPath(); x.moveTo(a, b); x.quadraticCurveTo((a + c) / 2 + (d - b) * 0.15, (b + d) / 2 - (c - a) * 0.15, c, d); x.lineWidth = 1.3; x.stroke();
+      });
+    } });
+  figure({ shapes: [{ p: ear(-9) }], fills: [['ochre', 0.85]], after: () => ink('usuD', (x) => { x.fillStyle = white(1); x.fill(pathIn(TH).M(-5, -32).L(-7, -46).L(2, -34).Z().p); }) });
+  const back = (x) => { const [a, b] = T(0, -36 - arch), [c, d] = T(0, 32); const g = x.createLinearGradient(a, b, c, d); g.addColorStop(0, white(1)); g.addColorStop(0.55, white(0.82)); g.addColorStop(1, white(0.62)); return g; };
+  figure({ shapes: [{ p: torso }, { p: neck }, { p: head }, { p: legPath(legs.nh) }, { p: legPath(legs.nf) }], fills: [['ochre', back]],
+    after: () => {
+      // White chest, throat and cheek: carved out of the brown block.
+      ink('ochre', (x) => {
+        x.globalCompositeOperation = 'destination-out';
+        x.fill(pathIn(T).M(52, -18).C(66, -8, 70, 12, 58, 31).C(48, 26, 44, 4, 52, -18).Z().p);
+        x.fill(pathIn(TH).M(6, 5).C(20, 10, 34, 8, 46, 6).L(40, 9).C(28, 14, 10, 21, -4, 16).C(-2, 10, 2, 7, 6, 5).Z().p);
+        x.fill(pathIn((u, v) => (u > 1000 ? TH(u - 2000, v) : T(u, v))).M(2000 - 2, 14).L(2000 + 8, 12).Q(66, 4, 62, 26).Q(56, 10, 2000 - 2, 14).Z().p);
+      });
+      ink('usuD', (x) => { x.fillStyle = white(1); x.fill(lowerLegPath(legs.nh, 1)); x.fill(lowerLegPath(legs.nf, 1)); });
+      ink('keyD', (x) => {
+        x.strokeStyle = '#fff'; x.fillStyle = '#fff';
+        // The near elbow.
+        const [ex, ey] = legs.nf.pts[1]; x.lineWidth = 1.6; x.beginPath(); x.arc(ex, ey, 7, -0.6, 1.4); x.stroke();
+        // Eye, a narrow fox's eye.
+        x.lineWidth = 2.2; x.beginPath(); x.moveTo(...TH(24, -10)); x.quadraticCurveTo(...TH(30, -14), ...TH(36, -9)); x.stroke();
+        x.beginPath(); x.arc(...TH(30, -10.5), 1.9, 0, Math.PI * 2); x.fill();
+        // Nose and mouth.
+        x.beginPath(); x.arc(...TH(60, -2), 3.2, 0, Math.PI * 2); x.fill();
+        x.lineWidth = 1.4; x.beginPath(); x.moveTo(...TH(40, 6)); x.quadraticCurveTo(...TH(48, 4), ...TH(55, 3)); x.stroke();
+        // Ruff on the cheek and fur at the chest.
+        x.lineWidth = 1.3;
+        for (let i = 0; i < 3; i++) { x.beginPath(); x.moveTo(...TH(-6 + i * 5, 13 + i)); x.lineTo(...TH(-10 + i * 5, 19 + i)); x.stroke(); }
+        for (let i = 0; i < 3; i++) { x.beginPath(); x.moveTo(...T(58 + i * 2, 4 + i * 8)); x.lineTo(...T(54 + i * 2, 8 + i * 8)); x.stroke(); }
+        // The line of the haunch.
+        x.lineWidth = 1.8; x.beginPath(); x.moveTo(...T(-46, -14)); x.quadraticCurveTo(...T(-30, 6), ...T(-48, 22)); x.stroke();
+      });
+    } });
+  figure({ shapes: [{ p: ear(2) }], fills: [['ochre', 1]], after: () => ink('usuD', (x) => { x.fillStyle = white(1); x.fill(pathIn(TH).M(4, -32).L(2, -46).L(11, -33).Z().p); }) });
+}
+
+/* ---------- the dog ---------- */
+const DOG_X = 706;
+function drawDog(t, alert) {
+  const breath = 1 + 0.03 * Math.sin(t * Math.PI * 2 / 2.4);
+  const T = (x, y) => [DOG_X + x, G + 2 + y * (y < -8 ? breath : 1)];
+  const Tf = (x, y) => [DOG_X + x, G + 2 + y];
+  // The straw mat.
+  const mat = new Path2D(); mat.ellipse(DOG_X - 8, G + 6, 152, 20, 0, 0, Math.PI * 2);
+  figure({ shapes: [{ p: mat }], kw: 2, fills: [['ochre', 0.34]], after: () => ink('keyD', (x) => {
+    x.save(); x.clip(mat); x.strokeStyle = '#fff'; x.lineWidth = 1.1;
+    for (let i = -150; i <= 150; i += 9) { x.beginPath(); x.moveTo(DOG_X - 8 + i, G - 16); x.lineTo(DOG_X - 8 + i * 1.04, G + 28); x.stroke(); }
+    x.lineWidth = 1.6; x.beginPath(); x.ellipse(DOG_X - 8, G + 6, 138, 14, 0, 0, Math.PI * 2); x.stroke();
+    x.restore();
+    x.strokeStyle = '#fff'; x.lineWidth = 1.2;
+    for (const side of [-1, 1]) for (let i = 0; i < 5; i++) { const sx = DOG_X - 8 + side * 152, sy = G + 6 - 8 + i * 4; x.beginPath(); x.moveTo(sx, sy); x.lineTo(sx + side * (7 + (i % 2) * 3), sy + 1); x.stroke(); }
+  }) });
+  // Shadow on the mat.
+  ink('usuD', (x) => { const g = x.createRadialGradient(DOG_X - 10, G + 4, 10, DOG_X - 10, G + 4, 120); g.addColorStop(0, white(0.4)); g.addColorStop(1, white(0)); x.fillStyle = g; x.save(); x.scale(1, 0.18); x.translate(0, (G + 4) * (1 / 0.18 - 1)); x.beginPath(); x.arc(DOG_X - 10, G + 4, 120, 0, Math.PI * 2); x.fill(); x.restore(); });
+  const paws = new Path2D();
+  capsule(paws, ...Tf(-58, -6), 9, ...Tf(-118, -4), 7.5);
+  capsule(paws, ...Tf(-48, -2), 9, ...Tf(-108, 0), 7.5);
+  figure({ shapes: [{ p: paws }], kw: 2.2, after: () => ink('keyD', (x) => {
+    x.strokeStyle = '#fff'; x.lineWidth = 1.3;
+    for (const [px, py] of [[-118, -4], [-108, 0]]) for (const d of [-3, 2]) { x.beginPath(); x.moveTo(...Tf(px + 2, py + d)); x.lineTo(...Tf(px - 4, py + d)); x.stroke(); }
+  }) });
+  const body = pathIn(T).M(-60, -10).C(-66, -52, -18, -72, 30, -67).C(72, -63, 98, -40, 93, -14).C(90, 0, 70, 4, 40, 2).L(-40, 2).C(-56, 2, -60, -2, -60, -10).Z().p;
+  const tail = new Path2D(pathIn(T).M(80, -44).C(104, -60, 98, -88, 74, -80).C(60, -74, 64, -60, 78, -60).p);
+  figure({ shapes: [{ p: body }, { p: tail, w: 13 }], kw: 2.4,
+    after: () => {
+      ink('usuD', (x) => {
+        x.save(); x.clip(body);
+        x.fillStyle = white(0.9);
+        x.beginPath(); x.ellipse(...T(16, -60), 34, 15, -0.12, 0, Math.PI * 2); x.fill();
+        x.beginPath(); x.ellipse(...T(70, -40), 18, 12, 0.5, 0, Math.PI * 2); x.fill();
+        x.restore();
+      });
+      ink('keyD', (x) => {
+        x.strokeStyle = '#fff'; x.lineWidth = 1.9;
+        x.beginPath(); x.moveTo(...T(36, 0)); x.bezierCurveTo(...T(72, -4), ...T(80, -36), ...T(56, -48)); x.stroke();
+        x.lineWidth = 1.3;
+        x.beginPath(); x.moveTo(...T(74, -62)); x.quadraticCurveTo(...T(86, -70), ...T(90, -62)); x.stroke();
+      });
+      const hp = new Path2D(); capsule(hp, ...Tf(34, -3), 7.5, ...Tf(64, -3), 6.5);
+      ink('keyD', (x) => { x.save(); x.globalCompositeOperation = 'destination-out'; x.fill(hp); x.restore(); x.strokeStyle = '#fff'; x.lineWidth = 2; x.stroke(hp); });
+    } });
+  const head = pathIn(Tf).M(-56, -50).C(-70, -66, -98, -62, -106, -42).C(-112, -34, -120, -30, -126, -26).C(-128, -18, -120, -14, -108, -14).C(-90, -12, -66, -10, -54, -20).C(-48, -28, -48, -42, -56, -50).Z().p;
+  const lift = alert ? 1 : 0;
+  const ear = pathIn(Tf).M(-82, -54).L(-60 + lift * 4, -70 - lift * 10).L(-64, -46).Z().p;
+  figure({ shapes: [{ p: head }], kw: 2.4, after: () => {
+    ink('usuD', (x) => { x.save(); x.clip(head); x.fillStyle = white(0.9); x.beginPath(); x.ellipse(...Tf(-94, -38), 13, 9, -0.2, 0, Math.PI * 2); x.fill(); x.restore(); });
+    ink('keyD', (x) => {
+      x.strokeStyle = '#fff'; x.fillStyle = '#fff';
+      x.lineWidth = 2; x.beginPath(); x.moveTo(...Tf(-102, -37)); x.quadraticCurveTo(...Tf(-96, alert ? -36 : -32), ...Tf(-89, -36)); x.stroke();
+      x.beginPath(); x.arc(...Tf(-125, -26), 3.6, 0, Math.PI * 2); x.fill();
+      x.lineWidth = 1.4; x.beginPath(); x.moveTo(...Tf(-124, -19)); x.quadraticCurveTo(...Tf(-116, -17), ...Tf(-110, -19)); x.stroke();
+    });
+  } });
+  figure({ shapes: [{ p: ear }], kw: 2.2, fills: [['usuD', 0.9]] });
+}
+
+/* ---------- fox fires: carved out of the night, printed pale yellow with a warm edge ---------- */
+function fire(x, y, s, phase) {
+  const f = 0.92 + 0.08 * Math.sin(phase * 7.3);
+  ink('ko', (c) => { const g = c.createRadialGradient(x, y, 0, x, y, 30 * s); g.addColorStop(0, white(1)); g.addColorStop(0.5, white(0.75)); g.addColorStop(1, white(0)); c.fillStyle = g; c.beginPath(); c.arc(x, y, 30 * s, 0, Math.PI * 2); c.fill(); });
+  const flame = new Path2D();
+  const lean = Math.sin(phase * 3.1) * 4 * s;
+  flame.moveTo(x, y + 9 * s * f);
+  flame.bezierCurveTo(x - 11 * s, y + 8 * s, x - 10 * s, y - 6 * s, x - 2 * s + lean * 0.4, y - 10 * s);
+  flame.bezierCurveTo(x + 2 * s + lean, y - 16 * s * f, x + 6 * s + lean, y - 22 * s * f, x + lean * 1.6, y - 28 * s * f);
+  flame.bezierCurveTo(x + 14 * s + lean, y - 14 * s, x + 12 * s, y + 8 * s, x, y + 9 * s * f);
+  ink('ochre', (c) => { const g = c.createRadialGradient(x, y, 0, x, y, 20 * s); g.addColorStop(0, white(0)); g.addColorStop(0.55, white(0.18)); g.addColorStop(1, white(0)); c.fillStyle = g; c.beginPath(); c.arc(x, y, 20 * s, 0, Math.PI * 2); c.fill(); c.fillStyle = white(0.28); c.fill(flame); });
+  ink('ki', (c) => { const g = c.createRadialGradient(x, y + 2 * s, 0, x, y + 2 * s, 14 * s); g.addColorStop(0, white(0.25)); g.addColorStop(1, white(0.95)); c.fillStyle = g; c.fill(flame); });
+}
+
+/* ---------- the landscape: drawn once ---------- */
+const SKY_ERASE = ['blue', 'ai', 'usu'];
+let link = { x: 132, y: 916, r: 22 };
+function placeLink() {
+  const a = document.getElementById('hanmoto');
+  a.style.left = ((link.x - link.r) / LW * 100) + '%';
+  a.style.top = ((link.y - link.r) / LH * 100) + '%';
+  a.style.width = (link.r * 2 / LW * 100) + '%';
+  a.style.height = (link.r * 2 / LH * 100) + '%';
+}
+function growTree() {
+  const r = rng(23), segs = [];
+  function limb(x, y, ang, len, w0, w1, depth, sway, jit = 0.42) {
+    const n = Math.max(2, Math.round(len / 20));
+    let px = x, py = y;
+    for (let i = 0; i < n; i++) {
+      ang += (r() - 0.5) * jit + sway;
+      const step = len / n, nx = px + Math.cos(ang) * step, ny = py + Math.sin(ang) * step;
+      const wa = lerp(w0, w1, i / n), wb = lerp(w0, w1, (i + 1) / n);
+      segs.push({ ax: px, ay: py, bx: nx, by: ny, ra: wa / 2, rb: wb / 2 });
+      if (depth > 0 && i > 0 && r() < 0.3 && wa > 3) {
+        const side = r() < 0.5 ? -1 : 1;
+        limb(px, py, ang + side * (0.55 + r() * 0.55), len * (0.38 + r() * 0.22), wa * 0.5, wa * 0.18, depth - 1, 0);
+      }
+      px = nx; py = ny;
+    }
+    if (depth > 0 && w1 > 1.6) {
+      limb(px, py, ang - 0.32 - r() * 0.2, len * 0.66, w1 * 0.8, w1 * 0.3, depth - 1, 0);
+      limb(px, py, ang + 0.3 + r() * 0.2, len * 0.58, w1 * 0.7, w1 * 0.26, depth - 1, 0);
+    }
+  }
+  // Trunk, then the great limbs of the old tree.
+  limb(262, 960, -1.56, 300, 150, 104, 0, 0, 0.1);
+  const top = segs[segs.length - 1];
+  limb(top.bx, top.by + 6, -1.62, 200, 104, 70, 0, 0, 0.14);
+  const crown = segs[segs.length - 1];
+  limb(crown.bx - 10, crown.by + 30, -2.45, 330, 54, 16, 3, 0.025, 0.3);
+  limb(crown.bx, crown.by, -1.75, 360, 52, 16, 3, 0.01, 0.3);
+  limb(crown.bx + 18, crown.by + 40, -0.62, 470, 48, 12, 3, 0.006, 0.3);
+  limb(crown.bx + 6, crown.by + 110, -0.25, 300, 32, 9, 2, 0.02, 0.3);
+  limb(crown.bx - 14, crown.by + 90, -2.9, 200, 28, 9, 2, -0.03, 0.3);
+  return segs;
+}
+function drawStatic() {
+  NAMES.slice(0, 6).forEach((n) => clear(PL[n]));
+  const r = rng(5);
+  NAMES.slice(0, 6).forEach((n) => { const x = PL[n].x; x.save(); x.beginPath(); x.rect(IMG.x, IMG.y, IMG.w, IMG.h); x.clip(); x.lineCap = 'round'; x.lineJoin = 'round'; });
+
+  // Night sky: Prussian blue, deepened by a sumi band at the top (ichimonji bokashi).
+  ink('blue', (x) => { x.save(); x.beginPath(); x.rect(IMG.x, IMG.y, IMG.w, IMG.h); x.clip(); const g = x.createLinearGradient(0, IMG.y, 0, HZ + 20); g.addColorStop(0, white(1)); g.addColorStop(1, white(0.78)); x.fillStyle = g; x.fillRect(IMG.x, IMG.y, IMG.w, HZ + 20 - IMG.y); x.restore(); });
+  ink('usu', (x) => { x.save(); x.beginPath(); x.rect(IMG.x, IMG.y, IMG.w, IMG.h); x.clip(); const g = x.createLinearGradient(0, IMG.y, 0, HZ + 20); g.addColorStop(0, white(1)); g.addColorStop(0.08, white(0.95)); g.addColorStop(0.26, white(0.42)); g.addColorStop(1, white(0.2)); x.fillStyle = g; x.fillRect(IMG.x, IMG.y, IMG.w, HZ + 20 - IMG.y); x.restore(); });
+  // Stars.
+  ink('gof', (x) => { x.save(); x.beginPath(); x.rect(IMG.x, IMG.y, IMG.w, IMG.h); x.clip(); for (let i = 0; i < 90; i++) { const sx = IMG.x + r() * IMG.w, sy = IMG.y + 30 + r() * (HZ - 120 - IMG.y); x.fillStyle = white(0.55 + r() * 0.4); x.beginPath(); x.arc(sx, sy, 0.9 + r() * 1.5, 0, Math.PI * 2); x.fill(); } x.restore(); });
+
+  // The snow field: faintly blue, greyer towards the horizon.
+  ink('ai', (x) => { x.save(); x.beginPath(); x.rect(IMG.x, IMG.y, IMG.w, IMG.h); x.clip(); const g = x.createLinearGradient(0, HZ, 0, IMG.y + IMG.h); g.addColorStop(0, white(0.62)); g.addColorStop(0.4, white(0.36)); g.addColorStop(1, white(0.24)); x.fillStyle = g; x.fillRect(IMG.x, HZ, IMG.w, IMG.y + IMG.h - HZ); x.restore(); });
+  ink('usu', (x) => { x.save(); x.beginPath(); x.rect(IMG.x, IMG.y, IMG.w, IMG.h); x.clip(); const g = x.createLinearGradient(0, HZ, 0, HZ + 200); g.addColorStop(0, white(0.6)); g.addColorStop(1, white(0.12)); x.fillStyle = g; x.fillRect(IMG.x, HZ, IMG.w, IMG.h); x.restore(); });
+  // Paddy dikes running off to the grove, half buried in snow.
+  ink('usu', (x) => {
+    x.save(); x.beginPath(); x.rect(IMG.x, HZ, IMG.w, IMG.h); x.clip();
+    const vp = [1080, HZ - 2];
+    for (const [sx, sy] of [[-200, 780], [700, 1000], [1700, 860], [1700, 640]]) {
+      x.strokeStyle = white(0.34); x.lineWidth = 3.4;
+      x.setLineDash([90 + r() * 140, 20 + r() * 40]);
+      x.beginPath(); x.moveTo(sx, sy); x.quadraticCurveTo((sx + vp[0]) / 2 + 60, (sy + vp[1]) / 2 + 40, ...vp); x.stroke();
+    }
+    x.setLineDash([]);
+    x.restore();
+  });
+  // The distant grove of the Inari shrine and the woods along the horizon.
+  const groves = [[220, 160, 34], [640, 170, 20], [1080, 230, 66], [1330, 150, 30], [880, 90, 16]];
+  const treeline = new Path2D();
+  treeline.rect(IMG.x, HZ - 6, IMG.w, 14);
+  for (let gx = IMG.x; gx < IMG.x + IMG.w + 20; gx += 12 + r() * 10) {
+    let h = 6;
+    for (const [c, w, hh] of groves) h = Math.max(h, hh * Math.exp(-(((gx - c) / (w / 2)) ** 2)));
+    const cr = 7 + r() * 8 + h * 0.12;
+    treeline.moveTo(gx + cr, HZ - h + cr * 0.4); treeline.arc(gx, HZ - h + cr * 0.4, cr, 0, Math.PI * 2);
+    treeline.rect(gx - cr * 0.7, HZ - h + cr * 0.4, cr * 1.4, h + 2);
+  }
+  ink('ai', (x) => { x.fillStyle = white(0.95); x.fill(treeline); });
+  ink('usu', (x) => { const g = x.createLinearGradient(0, HZ - 70, 0, HZ + 8); g.addColorStop(0, white(0.75)); g.addColorStop(1, white(0.35)); x.fillStyle = g; x.fill(treeline); });
+  // The torii before the shrine.
+  ink('shu', (x) => {
+    x.fillStyle = white(1);
+    const tx = 1150, ty = HZ + 2;
+    x.fillRect(tx - 9, ty - 22, 3, 22); x.fillRect(tx + 6, ty - 22, 3, 22);
+    x.fillRect(tx - 12, ty - 17, 24, 2.2);
+    x.beginPath(); x.moveTo(tx - 16, ty - 26); x.quadraticCurveTo(tx, ty - 23, tx + 16, ty - 26); x.lineTo(tx + 15, ty - 22.5); x.quadraticCurveTo(tx, ty - 20, tx - 15, ty - 22.5); x.closePath(); x.fill();
+  });
+  ink('blue', (x) => { x.globalCompositeOperation = 'destination-out'; x.fillRect(1134, HZ - 28, 32, 30); });
+  ink('ai', (x) => { x.globalCompositeOperation = 'destination-out'; x.fillStyle = white(0.7); x.fillRect(1138, HZ - 24, 24, 26); });
+
+  // The old tree.
+  const segs = growTree();
+  const thick = new Path2D(), thin = new Path2D();
+  for (const s of segs) capsule(s.ra > 3.2 ? thick : thin, s.ax, s.ay, s.ra, s.bx, s.by, s.rb);
+  // Key-block outline around the trunk and limbs: grow, then hollow out.
+  const tk = canvas(); tk.c.width = W; tk.c.height = H; logical(tk.x);
+  tk.x.strokeStyle = '#fff'; tk.x.fillStyle = '#fff'; tk.x.lineWidth = 5.2; tk.x.lineJoin = 'round';
+  tk.x.stroke(thick); tk.x.fill(thick);
+  tk.x.globalCompositeOperation = 'destination-out'; tk.x.fill(thick);
+  SKY_ERASE.forEach((n) => ink(n, (x) => { x.globalCompositeOperation = 'destination-out'; x.fill(thick); x.fill(thin); }));
+  ink('gof', (x) => { x.globalCompositeOperation = 'destination-out'; x.fill(thick); x.fill(thin); });
+  ink('usu', (x) => { x.fillStyle = white(0.9); x.fill(thick); });
+  ink('ai', (x) => { const g = x.createLinearGradient(180, 0, 380, 0); g.addColorStop(0, white(0.15)); g.addColorStop(1, white(0.75)); x.fillStyle = g; x.fill(thick); });
+  ink('key', (x) => { x.fillStyle = white(1); x.fill(thin); x.setTransform(1, 0, 0, 1, 0, 0); x.drawImage(tk.c, 0, 0); });
+  // Bark.
+  ink('key', (x) => {
+    x.save(); x.clip(thick); x.strokeStyle = white(1);
+    for (let i = 0; i < 14; i++) {
+      const s = segs[Math.floor(r() * 12)];
+      if (s.ra < 20) continue;
+      const u = r(), px = lerp(s.ax, s.bx, u) + (r() - 0.5) * s.ra * 1.5, py = lerp(s.ay, s.by, u);
+      x.lineWidth = 1.4 + r() * 1.4;
+      x.beginPath(); x.moveTo(px, py); x.bezierCurveTo(px + (r() - 0.5) * 16, py - 30, px + (r() - 0.5) * 16, py - 60, px + (r() - 0.5) * 10, py - 70 - r() * 50); x.stroke();
+    }
+    x.lineWidth = 2.2; x.beginPath(); x.ellipse(300, 700, 9, 16, 0.1, 0, Math.PI * 2); x.stroke();
+    x.restore();
+  });
+  // Snow lying along the tops of the limbs.
+  ink('gof', (x) => {
+    x.strokeStyle = white(1);
+    for (const s of segs) {
+      const ang = Math.atan2(s.by - s.ay, s.bx - s.ax), flat = Math.abs(Math.cos(ang));
+      const rr = (s.ra + s.rb) / 2;
+      if (flat < 0.3 || rr < 1.4 || rr > 34) continue;
+      x.lineWidth = Math.min(9, Math.max(1.4, rr * 0.9 * flat));
+      x.beginPath(); x.moveTo(s.ax, s.ay - rr * 0.75); x.lineTo(s.bx, s.by - rr * 0.75); x.stroke();
+    }
+  });
+  // The snowbank round the roots.
+  const bank = new Path2D();
+  bank.moveTo(IMG.x, 930); bank.bezierCurveTo(120, 880, 200, 900, 270, 890); bank.bezierCurveTo(360, 884, 470, 915, 640, 962); bank.lineTo(640, 1000); bank.lineTo(IMG.x, 1000); bank.closePath();
+  ['usu', 'ai', 'key'].forEach((n) => ink(n, (x) => { x.globalCompositeOperation = 'destination-out'; x.fill(bank); }));
+  ink('usu', (x) => { x.save(); x.clip(bank); const g = x.createLinearGradient(0, 884, 0, 930); g.addColorStop(0, white(0.0)); g.addColorStop(0.2, white(0.38)); g.addColorStop(1, white(0)); x.lineWidth = 16; x.strokeStyle = g; x.beginPath(); x.moveTo(IMG.x, 938); x.bezierCurveTo(120, 888, 200, 908, 270, 898); x.bezierCurveTo(360, 892, 470, 923, 640, 970); x.stroke(); x.restore(); });
+  ink('key', (x) => { x.strokeStyle = white(1); x.lineWidth = 2.2; x.beginPath(); x.moveTo(IMG.x, 930); x.bezierCurveTo(120, 880, 200, 900, 270, 890); x.bezierCurveTo(360, 884, 470, 915, 640, 962); x.stroke(); });
+
+  // ---- Cartouches ----
+  const strip = { x: 1360, y: 74, w: 62, h: 438 };
+  const square = { x: 1196, y: 74, w: 146, h: 146 };
+  [strip, square].forEach((b) => SKY_ERASE.concat(['gof', 'key']).forEach((n) => ink(n, (x) => { x.globalCompositeOperation = 'destination-out'; x.fillRect(b.x - 2, b.y - 2, b.w + 4, b.h + 4); })));
+  ink('shu', (x) => { x.fillStyle = white(1); x.fillRect(strip.x, strip.y, strip.w, strip.h); });
+  ink('key', (x) => {
+    x.strokeStyle = white(1); x.fillStyle = white(1);
+    x.lineWidth = 2.4; x.strokeRect(strip.x, strip.y, strip.w, strip.h);
+    x.font = '400 33px "Yuji Syuku"'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    const title = '素早き茶狐　怠け犬を跳び越ゆ';
+    [...title].forEach((ch, i) => x.fillText(ch, strip.x + strip.w / 2, strip.y + 28 + i * 29.5));
+    // Square cartouche: double rule, the sentence in English.
+    x.lineWidth = 2.4; x.strokeRect(square.x, square.y, square.w, square.h);
+    x.lineWidth = 1.1; x.strokeRect(square.x + 6, square.y + 6, square.w - 12, square.h - 12);
+    x.font = '500 20px "Shippori Mincho"';
+    ['The quick', 'brown fox', 'jumps over', 'the lazy dog'].forEach((l, i) => x.fillText(l, square.x + square.w / 2, square.y + 34 + i * 26.5));
+  });
+  ink('ai', (x) => { const g = x.createLinearGradient(0, square.y, 0, square.y + square.h); g.addColorStop(0, white(0.5)); g.addColorStop(0.45, white(0)); x.fillStyle = g; x.fillRect(square.x, square.y, square.w, square.h); });
+  ink('shu', (x) => { const g = x.createLinearGradient(0, square.y + square.h, 0, square.y); g.addColorStop(0, white(0.35)); g.addColorStop(0.4, white(0)); x.fillStyle = g; x.fillRect(square.x, square.y, square.w, square.h); });
+
+  // ---- Signature, seals ----
+  ink('key', (x) => {
+    x.fillStyle = white(1); x.strokeStyle = white(1);
+    x.font = '400 36px "Yuji Syuku"'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    ['電', '気', '画'].forEach((ch, i) => x.fillText(ch, 80, 776 + i * 36));
+    // Kiwame (approval) seal.
+    x.lineWidth = 1.6; x.beginPath(); x.arc(80, 732, 15, 0, Math.PI * 2); x.stroke();
+    x.font = '400 18px "Yuji Syuku"'; x.fillText('極', 80, 733);
+  });
+  // Artist's seal: red, the character carved out.
+  ink('shu', (x) => {
+    x.fillStyle = white(1); x.fillRect(64, 846, 32, 34);
+    x.globalCompositeOperation = 'destination-out';
+    x.font = '400 26px "Yuji Syuku"'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('電', 80, 864);
+  });
+  // Publisher's seal: a beer mug in a double ring.
+  const L = link;
+  ink('key', (x) => {
+    x.strokeStyle = white(1); x.fillStyle = white(1);
+    x.lineWidth = 2.2; x.beginPath(); x.arc(L.x, L.y, L.r, 0, Math.PI * 2); x.stroke();
+    x.lineWidth = 1; x.beginPath(); x.arc(L.x, L.y, L.r - 4, 0, Math.PI * 2); x.stroke();
+    x.lineWidth = 2;
+    const mx = L.x - 9, my = L.y - 8;
+    x.strokeRect(mx, my, 14, 18);
+    x.beginPath(); x.arc(mx + 14, my + 9, 5, -Math.PI / 2, Math.PI / 2); x.stroke();
+    x.beginPath(); x.arc(mx + 3, my - 1, 3.2, Math.PI, 0); x.arc(mx + 8.5, my - 2, 3.6, Math.PI, 0); x.arc(mx + 12.5, my - 0.5, 2.6, Math.PI, 0); x.stroke();
+    x.lineWidth = 1; for (let i = 0; i < 3; i++) { x.beginPath(); x.moveTo(mx + 4 + i * 3.4, my + 4); x.lineTo(mx + 4 + i * 3.4, my + 15); x.stroke(); }
+  });
+  ink('shu', (x) => { x.fillStyle = white(0.2); x.beginPath(); x.arc(L.x, L.y, L.r - 4, 0, Math.PI * 2); x.fill(); });
+
+  // Border of the image.
+  ink('key', (x) => { x.strokeStyle = white(1); x.lineWidth = 2.6; x.strokeRect(IMG.x, IMG.y, IMG.w, IMG.h); });
+  NAMES.slice(0, 6).forEach((n) => PL[n].x.restore());
+  pack('S1'); pack('S2');
+}
+
+/* ---------- one frame ---------- */
+const flakes = (() => { const r = rng(91); return Array.from({ length: 150 }, () => ({ x: r() * 1600 - 50, y: r() * 1100, v: 34 + r() * 46, s: 1.6 + r() * 2.6, ph: r() * 6.28, a: 0.6 + r() * 0.4 })); })();
+const procession = (() => { const r = rng(3); return Array.from({ length: 14 }, (_, i) => { const u = i / 13; return { x: lerp(1240, 760, u) + (r() - 0.5) * 40, y: lerp(HZ + 18, HZ + 46, u * u) + (r() - 0.5) * 6, s: lerp(0.18, 0.34, u), ph: r() * 9 }; }); })();
+
+const X0 = -240, XT = 470, XL = 1000, X1 = 1760, V = 430, LEAP = 0.85, PEAK = 135;
+const tTake = (XT - X0) / V, tLand = tTake + LEAP, tEnd = tLand + (X1 - XL) / V;
+function foxAt(t) {
+  if (t < tTake) {
+    const x = X0 + V * t, f = Math.floor(t * FPS);
+    const left = tTake - t;
+    if (left < 1.5 / FPS) return { x, air: 0, pose: POSES.crouch };
+    return { x, air: 0, pose: POSES[RUN[f % 4]], bob: f % 4 === 0 ? 4 : 0 };
+  }
+  if (t < tLand) {
+    const p = (t - tTake) / LEAP, x = lerp(XT, XL, p), air = 4 * PEAK * p * (1 - p);
+    const keys = [[0, 'takeoff'], [0.28, 'flight'], [0.66, 'flight'], [0.86, 'reach'], [1, 'land']];
+    let i = 0; while (i < keys.length - 2 && p > keys[i + 1][0]) i++;
+    const [p0, a] = keys[i], [p1, b] = keys[i + 1];
+    return { x, air, pose: mix(POSES[a], POSES[b], clamp((p - p0) / (p1 - p0), 0, 1)) };
+  }
+  const x = XL + V * (t - tLand), f = Math.floor((t - tLand) * FPS);
+  if (f < 1) return { x, air: 0, pose: POSES.land };
+  return { x, air: 0, pose: POSES[RUN[(f + 1) % 4]], bob: (f + 1) % 4 === 0 ? 4 : 0 };
+}
+
+function drawDynamic(time) {
+  ['ochre', 'keyD', 'ki', 'gofD', 'ko', 'usuD'].forEach((n) => clear(PL[n]));
+  const t = ((time % CYCLE) + CYCLE) % CYCLE;
+  // Distant fox fires gathering at the grove.
+  for (const p of procession) fire(p.x, p.y + Math.sin(time * 1.3 + p.ph) * 2, p.s, time + p.ph);
+
+  const fox = t < tEnd ? foxAt(t) : null;
+  const alert = t > tTake - 0.1 && t < tLand + 1.2;
+  setBox(DOG_X - 190, G - 110, 360, 150);
+  drawDog(time, alert);
+
+  if (fox && fox.x > -200 && fox.x < 1720) {
+    const rig = foxRig(fox.pose, fox.x, fox.air + (fox.bob || 0));
+    // A soft shadow on the snow, shrinking as the fox rises.
+    const sh = 1 - fox.air / (PEAK * 1.6);
+    ink('usuD', (x) => { x.save(); x.translate(fox.x - 6, G + 4); x.scale(1, 0.14); const g = x.createRadialGradient(0, 0, 0, 0, 0, 110 * sh); g.addColorStop(0, white(0.4 * sh)); g.addColorStop(1, white(0)); x.fillStyle = g; x.beginPath(); x.arc(0, 0, 110 * sh, 0, Math.PI * 2); x.fill(); x.restore(); });
+    setBox(fox.x - 260, G - fox.air - 300, 560, 360);
+    drawFox(rig);
+    // Two fires keep the fox company, trailing a little behind.
+    const lag = foxAt(Math.max(0, t - 0.2)), lag2 = foxAt(Math.max(0, t - 0.45));
+    fire(lag.x + 90, G - lag.air * 0.6 - 200 + Math.sin(time * 2.1) * 8, 1.25, time);
+    fire(lag2.x - 60, G - lag2.air * 0.4 - 170 + Math.sin(time * 1.7 + 2) * 8, 1.0, time + 3);
+  }
+
+  // Falling snow, printed last in gofun white.
+  ink('gofD', (x) => {
+    x.beginPath(); x.rect(IMG.x, IMG.y, IMG.w, IMG.h); x.clip();
+    for (const f of flakes) {
+      const y = ((f.y + f.v * time) % 1100) - 50, xx = f.x + Math.sin(time * 0.7 + f.ph) * 14;
+      x.fillStyle = white(f.a); x.beginPath(); x.arc(xx, y, f.s, 0, Math.PI * 2); x.fill();
+    }
+  });
+  pack('D1'); pack('D2');
+}
+
+/* ---------- the press ---------- */
+const VS = 'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
+const FS = `precision highp float;
+uniform sampler2D s1,s2,d1,d2;
+uniform vec2 res;
+uniform vec2 off[8];
+float h(vec2 p){vec3 q=fract(vec3(p.xyx)*.1031);q+=dot(q,q.yzx+33.33);return fract((q.x+q.y)*q.z);}
+float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}
+float fbm(vec2 p){float s=0.,a=.5;for(int i=0;i<4;i++){s+=a*n(p);p=p*2.03+17.1;a*=.5;}return s;}
+vec2 px;
+float edge(sampler2D t,vec2 uv,int ch,float m){
+  vec2 d=px*2.5;float b=0.;
+  vec4 a1=texture2D(t,uv+vec2(d.x,0.)),a2=texture2D(t,uv-vec2(d.x,0.)),a3=texture2D(t,uv+vec2(0.,d.y)),a4=texture2D(t,uv-vec2(0.,d.y));
+  if(ch==0)b=a1.r+a2.r+a3.r+a4.r;else if(ch==1)b=a1.g+a2.g+a3.g+a4.g;else if(ch==2)b=a1.b+a2.b+a3.b+a4.b;
+  return clamp(m-b*.25,0.,1.);
+}
+vec3 print(vec3 c,vec3 ink,float a){return c*mix(vec3(1.),ink,clamp(a,0.,1.));}
+void main(){
+  vec2 uv=vec2(gl_FragCoord.x/res.x,1.-gl_FragCoord.y/res.y);
+  px=1./res;
+  vec2 p=uv*vec2(1500.,1000.);
+  vec2 lu=vec2(1./1500.,1./1000.);
+  // Washi: warm, uneven, with long kozo fibres and the odd fleck of bark.
+  vec3 paper=vec3(.945,.912,.84);
+  float cloud=fbm(p*.012);
+  vec3 c=paper*(1.-.05*cloud);
+  float fa=n(vec2(p.x*.9+p.y*.35,p.y*.08-p.x*.03)*vec2(.35,1.)*.6);
+  float fb=n(vec2(p.y*.9-p.x*.3,p.x*.08)*vec2(.35,1.)*.6+40.);
+  c+=vec3(.025)*smoothstep(.78,.95,fa)-vec3(.03)*smoothstep(.8,.97,fb);
+  c*=1.-.35*step(.9993,h(floor(p*.7)));
+  // Baren: the mottle of hand-rubbed pigment; wood grain in the big blocks.
+  float mott=fbm(p*.045+3.), fine=n(p*.9);
+  float grain=.5+.5*sin(p.y*.11+fbm(p*vec2(.0025,.018))*9.);
+  float rub=(.8+.24*mott)*(.94+.06*fine);
+  vec4 S1a=texture2D(s1,uv+off[0]*lu), S1b=texture2D(s1,uv+off[1]*lu), S1c=texture2D(s1,uv+off[2]*lu);
+  vec4 S2a=texture2D(s2,uv+off[3]*lu), S2b=texture2D(s2,uv+off[4]*lu);
+  vec4 D1a=texture2D(d1,uv+off[5]*lu), D1b=texture2D(d1,uv+off[4]*lu), D1c=texture2D(d1,uv+off[6]*lu);
+  vec4 D2=texture2D(d2,uv), D2u=texture2D(d2,uv+off[2]*lu);
+  float ko=D2.g;
+  float blue=S1a.r, ai=S1b.g, usu=S1c.b;
+  blue=(blue*rub*(1.-.06*grain)+edge(s1,uv+off[0]*lu,0,blue)*.5)*(1.-ko);
+  ai=(ai*rub*(1.-.05*grain)+edge(s1,uv+off[1]*lu,1,ai)*.4)*(1.-ko);
+  usu=max(usu*rub*(1.-ko),D2u.b*rub);
+  float shu=(S2a.r*rub+edge(s2,uv+off[3]*lu,0,S2a.r)*.3)*(1.-ko);
+  float key=max(S2b.g*(1.-ko),D1b.g)*(.9+.1*fine);
+  float gof=max(texture2D(s2,uv).b*(1.-ko),D2.r);
+  float och=D1a.r*rub+edge(d1,uv+off[5]*lu,0,D1a.r)*.35;
+  float ki=D1c.b*rub;
+  c=print(c,vec3(.15,.25,.5),blue);
+  c=print(c,vec3(.36,.46,.64),ai);
+  c=print(c,vec3(.66,.67,.71),usu);
+  c=print(c,vec3(1.,.95,.55),ki);
+  c=print(c,vec3(.86,.56,.3),och);
+  c=print(c,vec3(.88,.3,.2),shu);
+  c=print(c,vec3(.12,.12,.14),key);
+  c=mix(c,vec3(.965,.955,.93)*(.97+.03*fine),clamp(gof*.92,0.,1.));
+  // Age: the sheet yellows a touch towards its edges.
+  float e=length((uv-.5)*vec2(1.,.8));
+  c*=1.-.07*smoothstep(.35,.75,e);
+  c=mix(c,c*vec3(1.,.97,.9),smoothstep(.4,.8,e));
+  gl_FragColor=vec4(c,1.);
+}`;
+let gl = null, prog = null, tex = {}, U = {};
+function initGL() {
+  gl = view.getContext('webgl', { antialias: false, alpha: false, preserveDrawingBuffer: true });
+  if (!gl) return false;
+  const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
+  prog = gl.createProgram();
+  gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS));
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+  gl.useProgram(prog);
+  const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+  const loc = gl.getAttribLocation(prog, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+  ['s1', 's2', 'd1', 'd2'].forEach((n, i) => {
+    const t = gl.createTexture(); gl.activeTexture(gl.TEXTURE0 + i); gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.uniform1i(gl.getUniformLocation(prog, n), i);
+    tex[n] = { t, unit: i };
+  });
+  U.res = gl.getUniformLocation(prog, 'res'); U.off = gl.getUniformLocation(prog, 'off');
+  return true;
+}
+function upload(name, src) { const t = tex[name]; gl.activeTexture(gl.TEXTURE0 + t.unit); gl.bindTexture(gl.TEXTURE_2D, t.t); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, src.c); }
+// Registration: every block sits a little off true, and wanders a hair from one impression to the next.
+const OFF = [[1.6, -1.1], [-1.2, 1.4], [0.8, 1.6], [-1.8, -0.6], [0, 0], [2.2, 1.2], [-0.8, -1.4], [0, 0]];
+function press(frame) {
+  gl.viewport(0, 0, W, H);
+  gl.uniform2f(U.res, W, H);
+  const r = rng(frame * 7 + 1), j = frozen === null ? 0.45 : 0;
+  gl.uniform2fv(U.off, new Float32Array(OFF.flatMap(([x, y], i) => (i === 4 ? [0, 0] : [x + (r() - 0.5) * j, y + (r() - 0.5) * j]))));
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+}
+// Without WebGL: multiply the blocks onto a flat sheet.
+const FALLBACK = [['blue', '#26407f'], ['ai', '#5c759f'], ['usu', '#a8a9b2'], ['ki', '#fff28c'], ['ochre', '#db8f4d'], ['usuD', '#a8a9b2'], ['shu', '#e04d33'], ['key', '#1f1f24'], ['keyD', '#1f1f24']];
+function pressFlat(ctx) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = '#f1e9d6'; ctx.fillRect(0, 0, W, H);
+  for (const [n, col] of FALLBACK) {
+    const t = tint.x; t.setTransform(1, 0, 0, 1, 0, 0); t.globalCompositeOperation = 'copy'; t.drawImage(PL[n].c, 0, 0);
+    t.globalCompositeOperation = 'source-in'; t.fillStyle = col; t.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'multiply'; ctx.drawImage(tint.c, 0, 0);
+  }
+  ctx.globalCompositeOperation = 'source-over'; ctx.drawImage(PL.gof.c, 0, 0); ctx.drawImage(PL.gofD.c, 0, 0);
+}
+
+let flat = null, last = -1;
+function frame(now) {
+  const time = frozen !== null ? frozen : now / 1000;
+  const f = Math.floor(time * FPS);
+  if (f !== last) {
+    last = f;
+    const tq = f / FPS;
+    drawDynamic(frozen !== null ? frozen : tq);
+    if (gl) { upload('d1', packs.D1); upload('d2', packs.D2); press(f); }
+    else pressFlat(flat);
+  }
+  if (frozen === null) requestAnimationFrame(frame);
+}
+function rebuild() {
+  drawStatic();
+  if (gl) { upload('s1', packs.S1); upload('s2', packs.S2); }
+  last = -1;
+}
+
+Promise.all([
+  document.fonts.load('33px "Yuji Syuku"', '素早き茶狐怠け犬を跳び越ゆ電気画極'),
+  document.fonts.load('500 20px "Shippori Mincho"', 'The quick brown fox jumps over the lazy dog'),
+]).catch(() => {}).then(() => {
+  sizeAll();
+  try { if (!initGL()) throw new Error('no webgl'); } catch (e) { gl = null; flat = view.getContext('2d'); }
+  rebuild();
+  requestAnimationFrame(frame);
+  let pending = 0;
+  addEventListener('resize', () => {
+    clearTimeout(pending);
+    pending = setTimeout(() => { if (sizeAll()) { rebuild(); if (frozen !== null) requestAnimationFrame(frame); } }, 150);
+  });
+});
+placeLink();
+})();
+</script>
+</body>
+</html>
