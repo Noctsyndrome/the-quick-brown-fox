@@ -357,11 +357,13 @@ function drawDog(t, alert) {
   // Ears: a shiba's upright triangles, rooted in the skull and tipped forward over the brow;
   // they stand a little taller when the fox passes.
   const lift = alert ? 1 : 0;
-  const earPath = (dx, dy) => pathIn((x, y) => Tf(x + dx, y + dy)).M(-88, -52)
+  // Ear height is squashed towards the root, so the ears stay short and neat.
+  const Te = (x, y) => Tf(x, -56 + (y + 56) * 0.66);
+  const earPath = (dx, dy) => pathIn((x, y) => Te(x + dx, y + dy)).M(-88, -52)
     .C(-91, -62 - lift * 2, -92 + lift * 3, -74 - lift * 5, -90 + lift * 4, -85 - lift * 6)
     .C(-89 + lift * 4, -88 - lift * 6, -86 + lift * 4, -88 - lift * 6, -84 + lift * 4, -86 - lift * 6)
     .C(-78 + lift * 2, -78 - lift * 4, -70, -66, -62, -57).Z().p;
-  const innerEar = pathIn(Tf).M(-85, -58).C(-87, -65 - lift * 2, -87 + lift * 3, -73 - lift * 4, -86 + lift * 4, -80 - lift * 5)
+  const innerEar = pathIn(Te).M(-85, -58).C(-87, -65 - lift * 2, -87 + lift * 3, -73 - lift * 4, -86 + lift * 4, -80 - lift * 5)
     .C(-81 + lift * 2, -74 - lift * 3, -76, -66, -70, -59).Z().p;
   figure({ shapes: [{ p: earPath(12, -2) }], kw: 2, fills: [['usuD', 1]], after: () => ink('keyD', (x) => { x.save(); x.clip(earPath(12, -2)); x.fillStyle = white(0.55); x.fillRect(DOG_X - 90, G - 110, 60, 60); x.restore(); }) });
 
@@ -423,7 +425,7 @@ function drawDog(t, alert) {
     ink('keyD', (x) => { x.save(); x.clip(earPath(0, 0)); x.fillStyle = white(0.5); x.fillRect(DOG_X - 110, G - 110, 70, 60); x.globalCompositeOperation = 'destination-out'; x.fill(innerEar); x.restore(); });
     ink('usuD', (x) => { x.globalCompositeOperation = 'destination-out'; x.fill(innerEar); });
     ink('ochre', (x) => { x.fillStyle = white(0.45); x.fill(innerEar); });
-    ink('keyD', (x) => { x.strokeStyle = '#fff'; x.lineWidth = 1.1; for (let i = 0; i < 2; i++) { x.beginPath(); x.moveTo(...Tf(-82 + i * 5, -60)); x.lineTo(...Tf(-83 + i * 4, -67 - lift * 3)); x.stroke(); } });
+    ink('keyD', (x) => { x.strokeStyle = '#fff'; x.lineWidth = 1.1; for (let i = 0; i < 2; i++) { x.beginPath(); x.moveTo(...Te(-82 + i * 5, -60)); x.lineTo(...Te(-83 + i * 4, -67 - lift * 3)); x.stroke(); } });
   }
 }
 
