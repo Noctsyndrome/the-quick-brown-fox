@@ -350,10 +350,10 @@ function drawDog(t, alert) {
 
   // Front paws: the far one stretched out past the muzzle, the near one drawn back under the chest.
   const farPaw = new Path2D(); capsule(farPaw, ...Tf(-46, -10), 8.5, ...Tf(-142, -9), 7);
-  const nearPaw = new Path2D(); capsule(nearPaw, ...Tf(-38, 1), 9.5, ...Tf(-112, 2), 7.5);
+  // The near foreleg grows out of the chest: it shares the body's outline, so there's no seam.
+  const nearPaw = new Path2D(); capsule(nearPaw, ...Tf(-30, -12), 12, ...Tf(-52, -1), 9.5); capsule(nearPaw, ...Tf(-52, -1), 9.5, ...Tf(-112, 2), 7.5);
   const toes = (px, py) => ink('keyD', (x) => { x.strokeStyle = '#fff'; x.lineWidth = 1.2; for (const d of [-3, 2]) { x.beginPath(); x.moveTo(...Tf(px + 3, py + d)); x.lineTo(...Tf(px - 3, py + d)); x.stroke(); } });
   figure({ shapes: [{ p: farPaw }], kw: 2.1, fills: [['ochre', 0.3]], after: () => toes(-142, -9) });
-  figure({ shapes: [{ p: nearPaw }], kw: 2.2, after: () => toes(-112, 2) });
 
   // Ears: rounded triangles, set back in sleep, pricking up when the fox passes.
   const lift = alert ? 1 : 0;
@@ -370,7 +370,7 @@ function drawDog(t, alert) {
   // Body and tail.
   const body = pathIn(T).M(-46, -30).C(-50, -58, -18, -67, 22, -63).C(62, -60, 97, -50, 97, -22).C(97, -4, 84, 2, 60, 2).L(-30, 2).C(-44, 2, -48, -14, -46, -30).Z().p;
   const tail = pathIn(T).M(88, -48).C(106, -72, 88, -96, 64, -86).C(50, -80, 54, -66, 68, -64).p;
-  figure({ shapes: [{ p: body }, { p: tail, w: 15 }, { p: head }], kw: 2.4,
+  figure({ shapes: [{ p: body }, { p: tail, w: 15 }, { p: head }, { p: nearPaw }], kw: 2.4,
     after: () => {
       const saddle = new Path2D(); saddle.addPath(body); saddle.addPath(tail);
       // Black saddle over the back, softening into tan along the flank.
@@ -408,6 +408,9 @@ function drawDog(t, alert) {
       else { x.lineWidth = 2; x.beginPath(); x.moveTo(...Tf(-101, -39)); x.quadraticCurveTo(...Tf(-95, -35), ...Tf(-89, -38)); x.stroke(); }
       x.beginPath(); x.arc(...Tf(-126, -26), 3.6, 0, Math.PI * 2); x.fill();
       x.lineWidth = 1.3; x.beginPath(); x.moveTo(...Tf(-124, -19)); x.quadraticCurveTo(...Tf(-116, -17), ...Tf(-108, -19)); x.stroke();
+      // The near forepaw: toes, and a short line at the elbow.
+      x.lineWidth = 1.2; for (const d of [-3, 2]) { x.beginPath(); x.moveTo(...Tf(-109, 2 + d)); x.lineTo(...Tf(-115, 2 + d)); x.stroke(); }
+      x.lineWidth = 1.6; x.beginPath(); x.moveTo(...Tf(-44, -9)); x.quadraticCurveTo(...Tf(-36, -4), ...Tf(-38, 6)); x.stroke();
       // Ruff where the cheek meets the neck.
       for (let i = 0; i < 3; i++) { x.beginPath(); x.moveTo(...Tf(-56 + i * 4, -20 - i * 3)); x.lineTo(...Tf(-50 + i * 4, -18 - i * 3)); x.stroke(); }
     });
