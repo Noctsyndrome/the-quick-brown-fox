@@ -21,7 +21,7 @@ body{min-height:100vh;min-height:100dvh;display:grid;grid-template-rows:1fr;plac
 <body>
 <a class="back" href="/the-quick-brown-fox-jumps-over-the-lazy-dog" aria-label="All versions"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" style="display:block"><path d="M11.5 7h-9M6 3 2.5 7 6 11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
 <div class="sheet">
-  <canvas id="print" role="img" aria-label="A woodblock print in the style of Hiroshige: on a snowy winter night under a full moon, beside a great bare tree, a brown fox carrying fox fires leaps over a black-and-tan shiba asleep in the snow. A red title strip reads, in Japanese, the quick brown fox jumps over the lazy dog."></canvas>
+  <canvas id="print" role="img" aria-label="A woodblock print in the style of Hiroshige: on a snowy winter night under a full moon, beside a great bare tree, a brown fox leaps over a black-and-tan shiba asleep in the snow. A red title strip reads, in Japanese, the quick brown fox jumps over the lazy dog."></canvas>
 </div>
 <script>
 (() => {
@@ -439,6 +439,12 @@ function fire(x, y, s, phase) {
 
 /* ---------- the landscape: drawn once ---------- */
 const SKY_ERASE = ['blue', 'ai', 'usu'];
+let trunk = null;
+const SEAL = { x: 64, y: 864, w: 32, h: 34 };
+function signature(x) {
+  x.font = '400 36px "Yuji Syuku"'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  ['電', '気', '画'].forEach((ch, i) => x.fillText(ch, 80, 770 + i * 36));
+}
 function growTree() {
   const r = rng(23), segs = [];
   function limb(x, y, ang, len, w0, w1, depth, sway, jit = 0.42) {
@@ -541,6 +547,7 @@ function drawStatic() {
   // The old tree.
   const segs = growTree();
   const thick = new Path2D(), thin = new Path2D();
+  trunk = thick;
   for (const s of segs) capsule(s.ra > 3.2 ? thick : thin, s.ax, s.ay, s.ra, s.bx, s.by, s.rb);
   // Key-block outline around the trunk and limbs: grow, then hollow out.
   const tk = canvas(); tk.c.width = W; tk.c.height = H; logical(tk.x);
@@ -604,14 +611,10 @@ function drawStatic() {
   ink('shu', (x) => { const g = x.createLinearGradient(0, square.y + square.h, 0, square.y); g.addColorStop(0, white(0.35)); g.addColorStop(0.4, white(0)); x.fillStyle = g; x.fillRect(square.x, square.y, square.w, square.h); });
 
   // ---- Signature and the artist's seal ----
-  ink('key', (x) => {
-    x.fillStyle = white(1);
-    x.font = '400 36px "Yuji Syuku"'; x.textAlign = 'center'; x.textBaseline = 'middle';
-    ['電', '気', '画'].forEach((ch, i) => x.fillText(ch, 80, 770 + i * 36));
-  });
+  ink('key', (x) => { x.fillStyle = white(1); signature(x); });
   // Red seal, the character carved out, set clear below the signature.
   ink('shu', (x) => {
-    x.fillStyle = white(1); x.fillRect(64, 864, 32, 34);
+    x.fillStyle = white(1); x.fillRect(SEAL.x, SEAL.y, SEAL.w, SEAL.h);
     x.globalCompositeOperation = 'destination-out';
     x.font = '400 26px "Yuji Syuku"'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('電', 80, 882);
   });
@@ -667,10 +670,8 @@ function drawDynamic(time) {
     ink('usuD', (x) => { x.save(); x.translate(fox.x - 6, G + 4); x.scale(1, 0.14); const g = x.createRadialGradient(0, 0, 0, 0, 0, 110 * sh); g.addColorStop(0, white(0.4 * sh)); g.addColorStop(1, white(0)); x.fillStyle = g; x.beginPath(); x.arc(0, 0, 110 * sh, 0, Math.PI * 2); x.fill(); x.restore(); });
     setBox(fox.x - 260, G - fox.air - 300, 560, 360);
     drawFox(rig);
-    // Two fires keep the fox company, trailing a little behind.
-    const lag = foxAt(Math.max(0, t - 0.2)), lag2 = foxAt(Math.max(0, t - 0.45));
-    fire(lag.x + 90, G - lag.air * 0.6 - 200 + Math.sin(time * 2.1) * 8, 1.25, time);
-    fire(lag2.x - 60, G - lag2.air * 0.4 - 170 + Math.sin(time * 1.7 + 2) * 8, 1.0, time + 3);
+    // The fox runs behind the old tree.
+    if (trunk) ['ochre', 'keyD', 'usuD', 'ko'].forEach((n) => ink(n, (x) => { x.globalCompositeOperation = 'destination-out'; x.fill(trunk); }));
   }
 
   // Falling snow, printed last in gofun white.
@@ -681,6 +682,18 @@ function drawDynamic(time) {
       x.fillStyle = white(f.a); x.beginPath(); x.arc(xx, y, f.s, 0, Math.PI * 2); x.fill();
     }
   });
+  // The signature and seal sit on top of the picture: nothing that moves covers them.
+  ['ochre', 'usuD', 'keyD'].forEach((n) => ink(n, (x) => {
+    x.globalCompositeOperation = 'destination-out'; x.fillStyle = '#fff'; x.strokeStyle = '#fff'; x.lineWidth = 6; x.lineJoin = 'round';
+    x.fillRect(SEAL.x - 3, SEAL.y - 3, SEAL.w + 6, SEAL.h + 6);
+    signature(x); x.font = '400 36px "Yuji Syuku"'; ['電', '気', '画'].forEach((ch, i) => x.strokeText(ch, 80, 770 + i * 36));
+  }));
+  ink('ko', (x) => { x.globalCompositeOperation = 'destination-out'; x.fillStyle = '#fff'; signature(x); x.fillRect(SEAL.x, SEAL.y, SEAL.w, SEAL.h); });
+  // Nothing that moves is printed on the margin.
+  ['ochre', 'keyD', 'ki', 'gofD', 'ko', 'usuD'].forEach((n) => ink(n, (x) => {
+    x.globalCompositeOperation = 'destination-out';
+    x.beginPath(); x.rect(0, 0, LW, LH); x.rect(IMG.x, IMG.y, IMG.w, IMG.h); x.fill('evenodd');
+  }));
   pack('D1'); pack('D2');
 }
 
