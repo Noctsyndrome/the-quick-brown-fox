@@ -670,6 +670,25 @@ function drawDynamic(time) {
   for (const p of procession) fire(p.x, p.y + Math.sin(time * 1.3 + p.ph) * 2, p.s, time + p.ph);
 
   const fox = t < tEnd ? foxAt(t) : null;
+  // Footprints: a single file of small dents in the snow, deeper at takeoff and landing.
+  // Once the fox is gone the falling snow fills them in before the next run.
+  {
+    const reach = fox ? fox.x - 40 : IMG.x + IMG.w;
+    const fade = t < tEnd ? 1 : clamp(1 - (t - tEnd) / (CYCLE - tEnd - 0.25), 0, 1);
+    if (fade > 0) {
+      const marks = new Path2D(), deepMarks = new Path2D(), r = rng(17);
+      for (let px = X0 + 30; px < reach; px += 38 + r() * 14) {
+        const side = r() < 0.5 ? -1 : 1;
+        if (px > XT + 20 && px < XL - 40) continue;
+        const deep = Math.abs(px - XT) < 40 || Math.abs(px - XL) < 50, m = deep ? deepMarks : marks;
+        m.moveTo(px + (deep ? 8 : 6), G + 4 + side * 3); m.ellipse(px, G + 4 + side * 3, deep ? 8 : 6, deep ? 3.2 : 2.5, 0, 0, Math.PI * 2);
+        if (deep) { m.moveTo(px + 20, G + 4 - side * 3); m.ellipse(px + 13, G + 4 - side * 3, 7, 2.8, 0, 0, Math.PI * 2); }
+      }
+      // Grey dents, with a touch of sumi on the shadowed side.
+      ink('usuD', (x) => { x.fillStyle = white(0.85 * fade); x.fill(marks); x.fill(deepMarks); });
+      ink('keyD', (x) => { x.fillStyle = white(0.22 * fade); x.fill(marks); x.fillStyle = white(0.32 * fade); x.fill(deepMarks); });
+    }
+  }
   const alert = t > tTake - 0.1 && t < tLand + 1.2;
   setBox(DOG_X - 190, G - 120, 360, 160);
   drawDog(time, alert);
