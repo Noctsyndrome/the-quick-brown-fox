@@ -37,6 +37,9 @@ h1{
   transition:transform .12s,box-shadow .12s;
 }
 .versions img.smooth{image-rendering:auto}
+/* A 3:2 print shown whole, centred in the 4:3 slot. */
+.versions img.print{object-fit:contain;object-position:center;border:0;transition:transform .12s,filter .12s}
+.versions a:hover img.print,.versions a:focus-visible img.print{box-shadow:none;filter:drop-shadow(0 3px 0 var(--hi))}
 .versions span{letter-spacing:.08em}
 .versions a:hover img,.versions a:focus-visible img{transform:translateY(-3px);box-shadow:0 3px 0 var(--hi)}
 .versions a:focus-visible{outline:none}
@@ -75,7 +78,7 @@ footer .source:hover{text-decoration:underline;text-underline-offset:.25em}
       <span>Terminal ASCII</span>
     </a></li>
     <li><a href="/the-quick-brown-fox-jumps-over-the-lazy-dog/ukiyoe">
-      <img class="smooth" src="/the-quick-brown-fox-jumps-over-the-lazy-dog/assets/thumbs/ukiyoe.png" width="640" height="480" alt="A woodblock print of a snowy, moonlit winter night: beside a bare tree, a brown fox leaps over a black-and-tan shiba asleep in the snow, with Japanese title cartouches.">
+      <img class="smooth print" src="/the-quick-brown-fox-jumps-over-the-lazy-dog/assets/thumbs/ukiyoe.png" width="720" height="480" alt="A woodblock print of a snowy, moonlit winter night: beside a bare tree, a brown fox leaps over a black-and-tan shiba asleep in the snow, with Japanese title cartouches.">
       <span>Ukiyo-e Woodblock</span>
     </a></li>
     <li class="soon" aria-label="More styles still brewing">
