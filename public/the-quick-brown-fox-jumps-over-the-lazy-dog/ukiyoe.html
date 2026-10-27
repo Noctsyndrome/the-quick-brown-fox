@@ -442,7 +442,7 @@ let trunk = null;
 const SEAL = { x: 64, y: 864, w: 32, h: 34 };
 function signature(x) {
   x.font = '400 36px "Yuji Syuku"'; x.textAlign = 'center'; x.textBaseline = 'middle';
-  ['電', '気', '画'].forEach((ch, i) => x.fillText(ch, 80, 770 + i * 36));
+  ['電', '気', '醸'].forEach((ch, i) => x.fillText(ch, 80, 770 + i * 36));
 }
 function growTree() {
   const r = rng(23), segs = [];
@@ -716,7 +716,7 @@ function drawDynamic(time) {
   ['ochre', 'usuD', 'keyD'].forEach((n) => ink(n, (x) => {
     x.globalCompositeOperation = 'destination-out'; x.fillStyle = '#fff'; x.strokeStyle = '#fff'; x.lineWidth = 6; x.lineJoin = 'round';
     x.fillRect(SEAL.x - 3, SEAL.y - 3, SEAL.w + 6, SEAL.h + 6);
-    signature(x); x.font = '400 36px "Yuji Syuku"'; ['電', '気', '画'].forEach((ch, i) => x.strokeText(ch, 80, 770 + i * 36));
+    signature(x); x.font = '400 36px "Yuji Syuku"'; ['電', '気', '醸'].forEach((ch, i) => x.strokeText(ch, 80, 770 + i * 36));
   }));
   ink('ko', (x) => { x.globalCompositeOperation = 'destination-out'; x.fillStyle = '#fff'; signature(x); x.fillRect(SEAL.x, SEAL.y, SEAL.w, SEAL.h); });
   // Nothing that moves is printed on the margin.
@@ -855,7 +855,7 @@ function rebuild() {
 }
 
 Promise.all([
-  document.fonts.load('33px "Yuji Syuku"', '素早き茶狐怠け犬を跳び越ゆ電気画ザクイックブラウンフォックスジャンプスオーバーレイジードッグ・ー'),
+  document.fonts.load('33px "Yuji Syuku"', '素早き茶狐怠け犬を跳び越ゆ電気醸ザクイックブラウンフォックスジャンプスオーバーレイジードッグ・ー'),
 ]).catch(() => {}).then(() => {
   sizeAll();
   try { if (!initGL()) throw new Error('no webgl'); } catch (e) { gl = null; flat = view.getContext('2d'); }
