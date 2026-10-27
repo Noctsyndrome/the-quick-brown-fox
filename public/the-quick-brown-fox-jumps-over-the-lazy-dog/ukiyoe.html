@@ -390,7 +390,7 @@ function drawDog(t, alert) {
         x.strokeStyle = '#fff';
         x.lineWidth = 1.2; for (let i = 0; i < 3; i++) { x.beginPath(); x.moveTo(...T(76 + i * 4, -66 - i * 3)); x.lineTo(...T(80 + i * 4, -72 - i * 3)); x.stroke(); }
       });
-      // The folded hind leg: the thigh curves down from the rump to the hock,
+      // The folded hind leg: the thigh bulges forward from the rump and comes down onto the paw,
       // and the white hind paw lies flat along the snow, toes forward.
       const paw = pathIn(Tf).M(92, -14).C(76, -16, 56, -15, 44, -12).C(34, -10, 32, -1, 40, 2).L(96, 2).Z().p;
       ink('ochre', (x) => { x.globalCompositeOperation = 'destination-out'; x.fill(paw); });
@@ -399,7 +399,7 @@ function drawDog(t, alert) {
         x.save(); x.globalCompositeOperation = 'destination-out'; x.clip(body); x.fill(paw); x.restore();
         x.strokeStyle = '#fff';
         x.lineWidth = 1.9;
-        x.beginPath(); x.moveTo(...T(44, -50)); x.bezierCurveTo(...T(80, -48), ...T(98, -24), ...T(86, -14)); x.stroke();
+        x.beginPath(); x.moveTo(...T(86, -52)); x.bezierCurveTo(...T(50, -50), ...T(34, -26), ...T(50, -14)); x.stroke();
         x.beginPath(); x.moveTo(...Tf(88, -14)); x.bezierCurveTo(...Tf(74, -16), ...Tf(56, -15), ...Tf(44, -12)); x.bezierCurveTo(...Tf(34, -10), ...Tf(32, -1), ...Tf(40, 2)); x.stroke();
         x.lineWidth = 1.2;
         for (const d of [-8, -3]) { x.beginPath(); x.moveTo(...Tf(36, d)); x.lineTo(...Tf(43, d)); x.stroke(); }
