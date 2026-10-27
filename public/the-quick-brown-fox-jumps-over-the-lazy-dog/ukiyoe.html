@@ -21,17 +21,18 @@ body{min-height:100vh;min-height:100dvh;display:grid;grid-template-rows:1fr;plac
 <body>
 <a class="back" href="/the-quick-brown-fox-jumps-over-the-lazy-dog" aria-label="All versions"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" style="display:block"><path d="M11.5 7h-9M6 3 2.5 7 6 11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
 <div class="sheet">
-  <canvas id="print" role="img" aria-label="A woodblock print in the style of Hiroshige: on a snowy winter night, beneath a great bare tree and a deep blue sky, a brown fox carrying fox fires leaps over a black-and-tan shiba asleep in the snow. A red title strip reads, in Japanese, the quick brown fox jumps over the lazy dog."></canvas>
+  <canvas id="print" role="img" aria-label="A woodblock print in the style of Hiroshige: on a snowy winter night under a full moon, beside a great bare tree, a brown fox carrying fox fires leaps over a black-and-tan shiba asleep in the snow. A red title strip reads, in Japanese, the quick brown fox jumps over the lazy dog."></canvas>
 </div>
 <script>
 (() => {
 'use strict';
 /* The print is laid out on a 1500 x 1000 sheet (a horizontal oban). */
 const LW = 1500, LH = 1000, FPS = 12, CYCLE = 6.4, G = 862, HZ = 560;
+const MOON = { x: 905, y: 205, r: 64 };
 const IMG = { x: 42, y: 42, w: 1416, h: 916 };
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const params = new URLSearchParams(location.search);
-const frozen = params.has('t') ? Number(params.get('t')) : (reduce ? 2.15 : null);
+const frozen = params.has('t') ? Number(params.get('t')) : (reduce ? 2.4 : null);
 
 const sheet = document.querySelector('.sheet');
 const view = document.getElementById('print');
@@ -215,7 +216,7 @@ function foxRig(pose, X, air) {
   const hc = Math.cos(-pose.head), hs = Math.sin(-pose.head);
   const N = [60, -30];
   const TH = (x, y) => { const [u, v] = R(N[0] * st + x * hc - y * hs, N[1] + x * hs + y * hc); return [u + tx, v + ty]; };
-  const TT = (x, y) => { const [u, v] = R(-76 * st + x, -8 + y); return [u + tx, v + ty]; };
+  const TT = (x, y) => { const [u, v] = R(-66 * st + x, -8 + y); return [u + tx, v + ty]; };
   for (const l of Object.values(legs)) l.pts = l.pts.map(([x, y]) => [x + tx, y + ty]);
   return { T, TH, TT, legs, pose, ground: ty + low };
 }
@@ -281,8 +282,8 @@ function drawFox(rig) {
   // Far legs, a shade lighter.
   figure({ shapes: [{ p: legPath(legs.fh) }, { p: legPath(legs.ff) }], fills: [['ochre', 0.62]],
     after: () => { const p = new Path2D(); p.addPath(lowerLegPath(legs.fh, 1)); p.addPath(lowerLegPath(legs.ff, 1)); ink('usuD', (x) => { x.fillStyle = white(0.95); x.fill(p); }); } });
-  figure({ shapes: [{ p: tail.all }], fills: [['ochre', (x) => { const [a, b] = rig.TT(0, -20), [c, d] = rig.TT(...tail.end); const g = x.createLinearGradient(a, b, c, d); g.addColorStop(0, white(1)); g.addColorStop(1, white(0.7)); return g; }]],
-    after: () => {
+  // The tail is part of the body's outline, so no seam shows where it joins.
+  const tailAfter = () => {
       ink('ochre', (x) => { x.globalCompositeOperation = 'destination-out'; x.fill(tail.tip); });
       // Fur lines where the white tip begins.
       ink('keyD', (x) => {
@@ -295,11 +296,12 @@ function drawFox(rig) {
         const [a, b] = rig.TT(...tail.left[i]), [c, d] = rig.TT(...tail.right[i]);
         x.beginPath(); x.moveTo(a, b); x.quadraticCurveTo((a + c) / 2 + (d - b) * 0.15, (b + d) / 2 - (c - a) * 0.15, c, d); x.lineWidth = 1.3; x.stroke();
       });
-    } });
+  };
   figure({ shapes: [{ p: ear(-10) }], fills: [['ochre', 0.85]], after: () => ink('usuD', earTip(-10)) });
   const back = (x) => { const [a, b] = T(0, -36 - arch), [c, d] = T(0, 32); const g = x.createLinearGradient(a, b, c, d); g.addColorStop(0, white(1)); g.addColorStop(0.55, white(0.82)); g.addColorStop(1, white(0.62)); return g; };
-  figure({ shapes: [{ p: torso }, { p: neck }, { p: head }, { p: legPath(legs.nh) }, { p: legPath(legs.nf) }], fills: [['ochre', back]],
+  figure({ shapes: [{ p: tail.all }, { p: torso }, { p: neck }, { p: head }, { p: legPath(legs.nh) }, { p: legPath(legs.nf) }], fills: [['ochre', back]],
     after: () => {
+      tailAfter();
       // White chest, throat and cheek: carved out of the brown block.
       ink('ochre', (x) => {
         x.globalCompositeOperation = 'destination-out';
@@ -335,7 +337,7 @@ function drawFox(rig) {
 }
 
 /* ---------- the dog ---------- */
-const DOG_X = 706;
+const DOG_X = 830;
 function drawDog(t, alert) {
   /* A black-and-tan shiba asleep in the snow, facing left: chin on its paws, ears relaxed back,
      tail curled over its back. Black saddle, tan brows and cheeks, white (urajiro) underneath. */
@@ -346,14 +348,12 @@ function drawDog(t, alert) {
   // A hollow pressed into the snow.
   ink('usuD', (x) => { x.save(); x.translate(DOG_X - 10, G + 4); x.scale(1, 0.16); const g = x.createRadialGradient(0, 0, 10, 0, 0, 130); g.addColorStop(0, white(0.5)); g.addColorStop(1, white(0)); x.fillStyle = g; x.beginPath(); x.arc(0, 0, 130, 0, Math.PI * 2); x.fill(); x.restore(); });
 
-  // Front paws, white socks, reaching out under the chin.
-  const paws = new Path2D();
-  capsule(paws, ...Tf(-50, -7), 9.5, ...Tf(-114, -5), 7.5);
-  capsule(paws, ...Tf(-40, -2), 9.5, ...Tf(-104, 0), 7.5);
-  figure({ shapes: [{ p: paws }], kw: 2.2, after: () => ink('keyD', (x) => {
-    x.strokeStyle = '#fff'; x.lineWidth = 1.2;
-    for (const [px, py] of [[-114, -5], [-104, 0]]) for (const d of [-3, 2]) { x.beginPath(); x.moveTo(...Tf(px + 3, py + d)); x.lineTo(...Tf(px - 3, py + d)); x.stroke(); }
-  }) });
+  // Front paws: the far one stretched out past the muzzle, the near one drawn back under the chest.
+  const farPaw = new Path2D(); capsule(farPaw, ...Tf(-46, -10), 8.5, ...Tf(-142, -9), 7);
+  const nearPaw = new Path2D(); capsule(nearPaw, ...Tf(-38, 1), 9.5, ...Tf(-112, 2), 7.5);
+  const toes = (px, py) => ink('keyD', (x) => { x.strokeStyle = '#fff'; x.lineWidth = 1.2; for (const d of [-3, 2]) { x.beginPath(); x.moveTo(...Tf(px + 3, py + d)); x.lineTo(...Tf(px - 3, py + d)); x.stroke(); } });
+  figure({ shapes: [{ p: farPaw }], kw: 2.1, fills: [['ochre', 0.3]], after: () => toes(-142, -9) });
+  figure({ shapes: [{ p: nearPaw }], kw: 2.2, after: () => toes(-112, 2) });
 
   // Ears: rounded triangles, set back in sleep, pricking up when the fox passes.
   const lift = alert ? 1 : 0;
@@ -465,7 +465,7 @@ function growTree() {
   limb(crown.bx - 10, crown.by + 30, -2.45, 330, 54, 16, 3, 0.025, 0.3);
   limb(crown.bx, crown.by, -1.75, 360, 52, 16, 3, 0.01, 0.3);
   limb(crown.bx + 18, crown.by + 40, -0.62, 470, 48, 12, 3, 0.006, 0.3);
-  limb(crown.bx + 6, crown.by + 110, -0.25, 300, 32, 9, 2, 0.02, 0.3);
+  limb(crown.bx + 6, crown.by + 110, -0.35, 230, 32, 9, 2, 0.02, 0.3);
   limb(crown.bx - 14, crown.by + 90, -2.9, 200, 28, 9, 2, -0.03, 0.3);
   return segs;
 }
@@ -478,7 +478,23 @@ function drawStatic() {
   ink('blue', (x) => { x.save(); x.beginPath(); x.rect(IMG.x, IMG.y, IMG.w, IMG.h); x.clip(); const g = x.createLinearGradient(0, IMG.y, 0, HZ + 20); g.addColorStop(0, white(1)); g.addColorStop(1, white(0.78)); x.fillStyle = g; x.fillRect(IMG.x, IMG.y, IMG.w, HZ + 20 - IMG.y); x.restore(); });
   ink('usu', (x) => { x.save(); x.beginPath(); x.rect(IMG.x, IMG.y, IMG.w, IMG.h); x.clip(); const g = x.createLinearGradient(0, IMG.y, 0, HZ + 20); g.addColorStop(0, white(1)); g.addColorStop(0.08, white(0.95)); g.addColorStop(0.26, white(0.42)); g.addColorStop(1, white(0.2)); x.fillStyle = g; x.fillRect(IMG.x, IMG.y, IMG.w, HZ + 20 - IMG.y); x.restore(); });
   // Stars.
-  ink('gof', (x) => { x.save(); x.beginPath(); x.rect(IMG.x, IMG.y, IMG.w, IMG.h); x.clip(); for (let i = 0; i < 90; i++) { const sx = IMG.x + r() * IMG.w, sy = IMG.y + 30 + r() * (HZ - 120 - IMG.y); x.fillStyle = white(0.55 + r() * 0.4); x.beginPath(); x.arc(sx, sy, 0.9 + r() * 1.5, 0, Math.PI * 2); x.fill(); } x.restore(); });
+  ink('gof', (x) => { x.save(); x.beginPath(); x.rect(IMG.x, IMG.y, IMG.w, IMG.h); x.clip(); for (let i = 0; i < 90; i++) { const sx = IMG.x + r() * IMG.w, sy = IMG.y + 30 + r() * (HZ - 120 - IMG.y); if (Math.hypot(sx - MOON.x, sy - MOON.y) < MOON.r * 2.6) continue; x.fillStyle = white(0.55 + r() * 0.4); x.beginPath(); x.arc(sx, sy, 0.9 + r() * 1.5, 0, Math.PI * 2); x.fill(); } x.restore(); });
+
+  // The full moon: carved out of the night blocks, with a soft halo and a band of cloud across it.
+  ['blue', 'usu'].forEach((n) => ink(n, (x) => {
+    x.globalCompositeOperation = 'destination-out';
+    const g = x.createRadialGradient(MOON.x, MOON.y, MOON.r, MOON.x, MOON.y, MOON.r * 2.6);
+    g.addColorStop(0, white(n === 'usu' ? 0.85 : 0.45)); g.addColorStop(0.25, white(n === 'usu' ? 0.5 : 0.2)); g.addColorStop(1, white(0));
+    x.fillStyle = g; x.beginPath(); x.arc(MOON.x, MOON.y, MOON.r * 2.6, 0, Math.PI * 2); x.fill();
+    x.fillStyle = white(1); x.beginPath(); x.arc(MOON.x, MOON.y, MOON.r, 0, Math.PI * 2); x.fill();
+  }));
+  const cloud = (cx, cy, w, h) => { const p = new Path2D(); p.moveTo(cx - w / 2, cy); p.bezierCurveTo(cx - w / 4, cy - h, cx + w / 4, cy - h * 1.1, cx + w / 2, cy - h * 0.2); p.bezierCurveTo(cx + w / 4, cy + h * 0.5, cx - w / 4, cy + h * 0.6, cx - w / 2, cy); return p; };
+  ink('usu', (x) => {
+    for (const [cx, cy, w, h, a] of [[880, 236, 300, 15, 0.75], [960, 258, 210, 10, 0.6], [820, 160, 170, 8, 0.4]]) {
+      const g = x.createLinearGradient(cx - w / 2, 0, cx + w / 2, 0); g.addColorStop(0, white(0)); g.addColorStop(0.3, white(a)); g.addColorStop(0.7, white(a)); g.addColorStop(1, white(0));
+      x.fillStyle = g; x.fill(cloud(cx, cy, w, h));
+    }
+  });
 
   // The snow field: faintly blue, greyer towards the horizon.
   ink('ai', (x) => { x.save(); x.beginPath(); x.rect(IMG.x, IMG.y, IMG.w, IMG.h); x.clip(); const g = x.createLinearGradient(0, HZ, 0, IMG.y + IMG.h); g.addColorStop(0, white(0.62)); g.addColorStop(0.4, white(0.36)); g.addColorStop(1, white(0.24)); x.fillStyle = g; x.fillRect(IMG.x, HZ, IMG.w, IMG.y + IMG.h - HZ); x.restore(); });
@@ -607,7 +623,7 @@ function drawStatic() {
 const flakes = (() => { const r = rng(91); return Array.from({ length: 150 }, () => ({ x: r() * 1600 - 50, y: r() * 1100, v: 34 + r() * 46, s: 1.6 + r() * 2.6, ph: r() * 6.28, a: 0.6 + r() * 0.4 })); })();
 const procession = (() => { const r = rng(3); return Array.from({ length: 14 }, (_, i) => { const u = i / 13; return { x: lerp(1240, 760, u) + (r() - 0.5) * 40, y: lerp(HZ + 18, HZ + 46, u * u) + (r() - 0.5) * 6, s: lerp(0.18, 0.34, u), ph: r() * 9 }; }); })();
 
-const X0 = -240, XT = 470, XL = 1000, X1 = 1760, V = 430, LEAP = 0.85, PEAK = 135;
+const X0 = -240, XT = 594, XL = 1124, X1 = 1760, V = 430, LEAP = 0.85, PEAK = 150;
 const tTake = (XT - X0) / V, tLand = tTake + LEAP, tEnd = tLand + (X1 - XL) / V;
 function foxAt(t) {
   if (t < tTake) {
@@ -618,7 +634,7 @@ function foxAt(t) {
   }
   if (t < tLand) {
     const p = (t - tTake) / LEAP, x = lerp(XT, XL, p), air = 4 * PEAK * p * (1 - p);
-    const keys = [[0, 'takeoff'], [0.28, 'flight'], [0.66, 'flight'], [0.86, 'reach'], [1, 'land']];
+    const keys = [[0, 'takeoff'], [0.28, 'flight'], [0.7, 'flight'], [0.9, 'reach'], [1, 'land']];
     let i = 0; while (i < keys.length - 2 && p > keys[i + 1][0]) i++;
     const [p0, a] = keys[i], [p1, b] = keys[i + 1];
     return { x, air, pose: mix(POSES[a], POSES[b], clamp((p - p0) / (p1 - p0), 0, 1)) };
@@ -631,12 +647,14 @@ function foxAt(t) {
 function drawDynamic(time) {
   ['ochre', 'keyD', 'ki', 'gofD', 'ko', 'usuD'].forEach((n) => clear(PL[n]));
   const t = ((time % CYCLE) + CYCLE) % CYCLE;
+  // A pale yellow wash on the moon.
+  ink('ki', (x) => { x.fillStyle = white(0.32); x.beginPath(); x.arc(MOON.x, MOON.y, MOON.r, 0, Math.PI * 2); x.fill(); });
   // Distant fox fires gathering at the grove.
   for (const p of procession) fire(p.x, p.y + Math.sin(time * 1.3 + p.ph) * 2, p.s, time + p.ph);
 
   const fox = t < tEnd ? foxAt(t) : null;
   const alert = t > tTake - 0.1 && t < tLand + 1.2;
-  setBox(DOG_X - 190, G - 110, 360, 150);
+  setBox(DOG_X - 190, G - 120, 360, 160);
   drawDog(time, alert);
 
   if (fox && fox.x > -200 && fox.x < 1720) {
