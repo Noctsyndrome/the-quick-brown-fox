@@ -399,7 +399,7 @@ function drawDog(t, alert) {
         x.save(); x.globalCompositeOperation = 'destination-out'; x.clip(body); x.fill(paw); x.restore();
         x.strokeStyle = '#fff';
         x.lineWidth = 1.9;
-        x.beginPath(); x.moveTo(...T(86, -52)); x.bezierCurveTo(...T(50, -50), ...T(34, -26), ...T(50, -14)); x.stroke();
+        x.save(); x.clip(body); x.beginPath(); x.moveTo(...T(78, -44)); x.bezierCurveTo(...T(50, -46), ...T(34, -26), ...T(50, -14)); x.stroke(); x.restore();
         x.beginPath(); x.moveTo(...Tf(88, -14)); x.bezierCurveTo(...Tf(74, -16), ...Tf(56, -15), ...Tf(44, -12)); x.bezierCurveTo(...Tf(34, -10), ...Tf(32, -1), ...Tf(40, 2)); x.stroke();
         x.lineWidth = 1.2;
         for (const d of [-8, -3]) { x.beginPath(); x.moveTo(...Tf(36, d)); x.lineTo(...Tf(43, d)); x.stroke(); }
