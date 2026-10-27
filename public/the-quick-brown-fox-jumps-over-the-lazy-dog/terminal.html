@@ -28,7 +28,8 @@
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:#0c0c0e;color:var(--fg);overflow:hidden}
-body{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;display:grid;place-items:center;padding:56px 16px 24px;height:100dvh}
+/* One explicit row: elements that extensions append to <body> get empty implicit rows and cannot shift the monitor. */
+body{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;display:grid;grid-template-rows:1fr;place-items:center;padding:56px 16px 24px;height:100dvh}
 .back{position:fixed;top:16px;left:16px;z-index:3;width:26px;height:26px;display:grid;place-items:center;border:1.5px solid #4a4d55;border-radius:50%;color:#c8ccd4;text-decoration:none}
 .back:hover,.back:focus-visible{border-color:#c8ccd4;outline:none}
 :root{--bez:clamp(8px,1.6vw,18px);--radius:clamp(12px,2.2vw,28px);--w:640px;--h:480px;--fs:14px;--ft:14px}
@@ -47,15 +48,15 @@ body{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;display:g
 main{
   height:100%;display:flex;flex-direction:column;
   max-width:var(--mw);margin:0 auto;
-  padding:calc(var(--ft) * 1.2) calc(var(--fs) * 1.2);
+  padding:calc(var(--fs) * 1.2) calc(var(--fs) * 1.2);
   font-size:var(--ft);line-height:1.2;
   text-shadow:0 0 1px color-mix(in srgb,currentColor 70%,transparent),0 0 7px color-mix(in srgb,currentColor var(--bloom),transparent);
   cursor:text;
 }
 
 .line{white-space:pre-wrap;word-break:break-word;min-height:1.2em}
-.scene{margin:calc(var(--ft) * 1.2) 0;font-family:inherit;font-size:var(--fs);line-height:1.2;white-space:pre;overflow:hidden;flex:none;user-select:none;-webkit-user-select:none}
-.cmd{flex:1;min-height:0;overflow:hidden;margin-top:calc(var(--ft) * 1.2)}
+.scene{margin:calc(var(--fs) * 1.2) 0;font-family:inherit;font-size:var(--fs);line-height:1.2;white-space:pre;overflow:hidden;flex:none;user-select:none;-webkit-user-select:none}
+.cmd{flex:1;min-height:0;overflow:hidden;margin-top:calc(var(--fs) * 1.2)}
 .scene,.scene *{font-variant-ligatures:none}
 .mu{color:var(--mu)}.us{color:var(--user)}.pa{color:var(--path)}.er{color:var(--err)}
 .fx{color:var(--fox)}.fw{color:var(--fox2)}.fk{color:var(--fox3)}.fk2{color:var(--fox4)}.dg{color:var(--dog)}.zz{color:var(--z)}
@@ -289,7 +290,7 @@ function still() {
   $('say').textContent = sentence;
 }
 
-// The tube has a fixed size: 4:3 when there is room, otherwise a tall screen that fills the phone.
+// The tube has a fixed 4:3 size.
 // Plex Mono cells are 0.6em wide and 1.2em tall. The grid is COLS + 4 columns wide and needs about
 // 27 rows (prompt, scene, sentence, a few command lines, margins).
 const CELL = 0.6, GRID_W = (COLS + 4) * CELL, GRID_H = 27 * 1.2;
@@ -299,10 +300,8 @@ function fit() {
   const aw = innerWidth - 32 - bez * 2, ah = vh - 80 - bez * 2;
   let W = Math.min(aw, ah * 4 / 3, 1000), H = W * 3 / 4;
   let fs = Math.floor(Math.min(W / GRID_W, H / GRID_H) * 4) / 4, ft = fs;
-  if (fs < 11 && aw < 640) {
-    W = aw; H = Math.max(ah, 320);
-    fs = Math.floor(W / GRID_W * 4) / 4; ft = Math.max(12, fs);
-  }
+  // Small screens keep 4:3; only the text outside the scene gets a readable floor.
+  if (fs < 11) ft = 11;
   const r = document.documentElement.style;
   r.setProperty('--w', Math.floor(W) + 'px'); r.setProperty('--h', Math.floor(H) + 'px');
   r.setProperty('--fs', fs + 'px'); r.setProperty('--ft', ft + 'px');

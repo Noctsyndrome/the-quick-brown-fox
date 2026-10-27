@@ -19,7 +19,8 @@
 }
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;background:var(--page)}
-body{min-height:100vh;display:grid;place-items:center;padding:56px 16px 32px;font-family:"Helvetica Neue",Arial,sans-serif;-webkit-tap-highlight-color:transparent}
+/* One explicit row: elements that extensions append to <body> get empty implicit rows and cannot shift the device. */
+body{min-height:100vh;display:grid;grid-template-rows:1fr;place-items:center;padding:56px 16px 32px;font-family:"Helvetica Neue",Arial,sans-serif;-webkit-tap-highlight-color:transparent}
 .back{position:fixed;top:16px;left:16px;width:26px;height:26px;display:grid;place-items:center;border:1.5px solid #a9a59b;border-radius:50%;color:#4a4740;text-decoration:none;font:15px/1 ui-monospace,Menlo,Consolas,monospace}
 .back:hover,.back:focus-visible{border-color:#4a4740;background:var(--shell-hi);outline:none}
 
