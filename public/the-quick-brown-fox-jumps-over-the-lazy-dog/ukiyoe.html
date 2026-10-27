@@ -21,7 +21,7 @@ body{min-height:100vh;min-height:100dvh;display:grid;grid-template-rows:1fr;plac
 <body>
 <a class="back" href="/the-quick-brown-fox-jumps-over-the-lazy-dog" aria-label="All versions"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" style="display:block"><path d="M11.5 7h-9M6 3 2.5 7 6 11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
 <div class="sheet">
-  <canvas id="print" role="img" aria-label="A woodblock print in the style of Hiroshige: on a snowy winter night, beneath a great bare tree and a deep blue sky, a brown fox carrying fox fires leaps over a white dog asleep on a straw mat. A red title strip reads, in Japanese, the quick brown fox jumps over the lazy dog."></canvas>
+  <canvas id="print" role="img" aria-label="A woodblock print in the style of Hiroshige: on a snowy winter night, beneath a great bare tree and a deep blue sky, a brown fox carrying fox fires leaps over a black-and-tan shiba asleep in the snow. A red title strip reads, in Japanese, the quick brown fox jumps over the lazy dog."></canvas>
 </div>
 <script>
 (() => {
@@ -176,12 +176,12 @@ function ink(plate, fn) { const x = PL[plate].x; x.save(); logical(x); x.lineCap
 /* Angles: 0 points straight down, positive swings forward (the fox faces right). */
 const POSES = {
   run1: { tilt: 0.03, arch: -2, st: 1.08, head: 0.02, tail: 0.12, curl: 0.25, nf: [1.0, 1.25, 1.9], ff: [0.75, 0.95, 1.8], nh: [-0.55, -1.2, -1.15, -0.5], fh: [-0.75, -1.35, -1.3, -0.7] },
-  run2: { tilt: -0.04, arch: 6, st: 0.96, head: 0.1, tail: 0.28, curl: 0.5, nf: [0.1, -0.7, -0.2], ff: [-0.2, -1.0, -0.5], nh: [-0.1, -0.95, -0.55, 0.2], fh: [-0.3, -1.1, -0.8, 0] },
-  run3: { tilt: -0.02, arch: 9, st: 0.9, head: 0.14, tail: 0.32, curl: 0.55, nf: [-0.5, -0.9, -0.3], ff: [-0.25, -0.7, 0.2], nh: [0.9, 0.0, 0.5, 1.3], fh: [0.7, -0.15, 0.35, 1.2] },
+  run2: { tilt: -0.04, arch: 6, st: 0.96, head: 0.1, tail: 0.28, curl: 0.5, nf: [0.15, -0.05, 1.0], ff: [-0.15, -0.3, 0.7], nh: [-0.1, -0.95, -0.55, 0.2], fh: [-0.3, -1.1, -0.8, 0] },
+  run3: { tilt: -0.02, arch: 9, st: 0.9, head: 0.14, tail: 0.32, curl: 0.55, nf: [-0.45, -0.55, 0.3], ff: [-0.2, -0.3, 0.6], nh: [0.9, 0.0, 0.5, 1.3], fh: [0.7, -0.15, 0.35, 1.2] },
   run4: { tilt: 0.0, arch: 3, st: 1.0, head: 0.06, tail: 0.2, curl: 0.4, nf: [0.45, 0.3, 1.5], ff: [0.25, 0.05, 1.4], nh: [0.45, -0.55, 0.0, 1.0], fh: [0.2, -0.8, -0.25, 0.8] },
-  crouch: { tilt: -0.12, arch: 12, st: 0.88, head: -0.12, tail: 0.35, curl: 0.5, nf: [-0.35, 0.5, 1.5], ff: [-0.15, 0.6, 1.5], nh: [1.15, -1.0, 0.35, 1.3], fh: [1.0, -1.1, 0.25, 1.3] },
-  takeoff: { tilt: 0.4, arch: -2, st: 1.06, head: 0.15, tail: 0.25, curl: 0.3, nf: [1.2, 0.2, 1.2], ff: [1.0, -0.2, 0.8], nh: [-0.7, -1.3, -1.5, -1.6], fh: [-0.5, -1.15, -1.3, -1.4] },
-  flight: { tilt: 0.04, arch: -6, st: 1.1, head: 0.04, tail: 0.3, curl: 0.25, nf: [1.05, -0.35, 0.7], ff: [0.85, -0.6, 0.4], nh: [-0.7, -1.25, -1.05, -0.6], fh: [-0.45, -1.05, -0.8, -0.3] },
+  crouch: { tilt: -0.12, arch: 12, st: 0.88, head: -0.12, tail: 0.35, curl: 0.5, nf: [-0.25, 0.15, 1.5], ff: [-0.05, 0.3, 1.5], nh: [1.15, -1.0, 0.35, 1.3], fh: [1.0, -1.1, 0.25, 1.3] },
+  takeoff: { tilt: 0.4, arch: -2, st: 1.06, head: 0.15, tail: 0.25, curl: 0.3, nf: [1.1, 1.0, 1.3], ff: [0.85, 0.6, 1.1], nh: [-0.7, -1.3, -1.5, -1.6], fh: [-0.5, -1.15, -1.3, -1.4] },
+  flight: { tilt: 0.04, arch: -6, st: 1.1, head: 0.04, tail: 0.3, curl: 0.25, nf: [1.2, 1.35, 1.0], ff: [0.95, 1.05, 0.8], nh: [-0.7, -1.25, -1.05, -0.6], fh: [-0.45, -1.05, -0.8, -0.3] },
   reach: { tilt: -0.32, arch: 2, st: 1.04, head: -0.12, tail: 0.4, curl: 0.3, nf: [0.6, 0.35, 1.3], ff: [0.85, 0.65, 1.4], nh: [0.5, -0.9, -0.2, 0.6], fh: [0.3, -1.0, -0.4, 0.4] },
   land: { tilt: -0.16, arch: 8, st: 0.9, head: -0.05, tail: 0.5, curl: 0.45, nf: [0.12, -0.15, 1.4], ff: [0.32, 0.1, 1.45], nh: [0.65, -0.45, 0.3, 1.0], fh: [0.45, -0.65, 0.15, 1.0] },
 };
@@ -272,7 +272,11 @@ function drawFox(rig) {
     .C(62, 4, 52, 7, 40, 8)
     .C(28, 14, 10, 21, -4, 16)
     .C(-16, 10, -18, -8, -8, -16).Z().p;
-  const ear = (dx) => pathIn(TH).M(-2 + dx, -16).L(2 + dx, -46).L(16 + dx, -19).Z().p;
+  // Ears: a curved back edge, a straighter front, a rounded tip.
+  const ear = (dx) => pathIn(TH).M(-7 + dx, -14).C(-10 + dx, -27, -6 + dx, -41, 1 + dx, -50)
+    .C(3 + dx, -52, 6 + dx, -51, 7 + dx, -47).C(12 + dx, -37, 16 + dx, -27, 17 + dx, -18).Z().p;
+  const earTip = (dx) => (x) => { x.save(); x.clip(ear(dx)); x.fillStyle = white(1); x.fill(pathIn(TH).M(-20 + dx, -60).L(30 + dx, -60).L(30 + dx, -38).C(10 + dx, -34, 0 + dx, -36, -20 + dx, -40).Z().p); x.restore(); };
+  const innerEar = pathIn(TH).M(0, -18).C(-2, -28, 0, -37, 4, -42).C(8, -35, 11, -27, 13, -19).Z().p;
   const tail = tailPaths(rig);
   // Far legs, a shade lighter.
   figure({ shapes: [{ p: legPath(legs.fh) }, { p: legPath(legs.ff) }], fills: [['ochre', 0.62]],
@@ -292,7 +296,7 @@ function drawFox(rig) {
         x.beginPath(); x.moveTo(a, b); x.quadraticCurveTo((a + c) / 2 + (d - b) * 0.15, (b + d) / 2 - (c - a) * 0.15, c, d); x.lineWidth = 1.3; x.stroke();
       });
     } });
-  figure({ shapes: [{ p: ear(-9) }], fills: [['ochre', 0.85]], after: () => ink('usuD', (x) => { x.fillStyle = white(1); x.fill(pathIn(TH).M(-5, -32).L(-7, -46).L(2, -34).Z().p); }) });
+  figure({ shapes: [{ p: ear(-10) }], fills: [['ochre', 0.85]], after: () => ink('usuD', earTip(-10)) });
   const back = (x) => { const [a, b] = T(0, -36 - arch), [c, d] = T(0, 32); const g = x.createLinearGradient(a, b, c, d); g.addColorStop(0, white(1)); g.addColorStop(0.55, white(0.82)); g.addColorStop(1, white(0.62)); return g; };
   figure({ shapes: [{ p: torso }, { p: neck }, { p: head }, { p: legPath(legs.nh) }, { p: legPath(legs.nf) }], fills: [['ochre', back]],
     after: () => {
@@ -322,67 +326,98 @@ function drawFox(rig) {
         x.lineWidth = 1.8; x.beginPath(); x.moveTo(...T(-46, -14)); x.quadraticCurveTo(...T(-30, 6), ...T(-48, 22)); x.stroke();
       });
     } });
-  figure({ shapes: [{ p: ear(2) }], fills: [['ochre', 1]], after: () => ink('usuD', (x) => { x.fillStyle = white(1); x.fill(pathIn(TH).M(4, -32).L(2, -46).L(11, -33).Z().p); }) });
+  figure({ shapes: [{ p: ear(0) }], fills: [['ochre', 1]], after: () => {
+    ink('usuD', earTip(0));
+    // The pale inside of the near ear, with a few hairs.
+    ['ochre', 'usuD'].forEach((n) => ink(n, (x) => { x.globalCompositeOperation = 'destination-out'; x.fill(innerEar); }));
+    ink('keyD', (x) => { x.strokeStyle = '#fff'; x.lineWidth = 1.1; for (let i = 0; i < 3; i++) { x.beginPath(); x.moveTo(...TH(2 + i * 4, -19)); x.lineTo(...TH(3 + i * 3, -29 + i * 2)); x.stroke(); } });
+  } });
 }
 
 /* ---------- the dog ---------- */
 const DOG_X = 706;
 function drawDog(t, alert) {
+  /* A black-and-tan shiba asleep in the snow, facing left: chin on its paws, ears relaxed back,
+     tail curled over its back. Black saddle, tan brows and cheeks, white (urajiro) underneath. */
   const breath = 1 + 0.03 * Math.sin(t * Math.PI * 2 / 2.4);
   const T = (x, y) => [DOG_X + x, G + 2 + y * (y < -8 ? breath : 1)];
   const Tf = (x, y) => [DOG_X + x, G + 2 + y];
-  // The straw mat.
-  const mat = new Path2D(); mat.ellipse(DOG_X - 8, G + 6, 152, 20, 0, 0, Math.PI * 2);
-  figure({ shapes: [{ p: mat }], kw: 2, fills: [['ochre', 0.34]], after: () => ink('keyD', (x) => {
-    x.save(); x.clip(mat); x.strokeStyle = '#fff'; x.lineWidth = 1.1;
-    for (let i = -150; i <= 150; i += 9) { x.beginPath(); x.moveTo(DOG_X - 8 + i, G - 16); x.lineTo(DOG_X - 8 + i * 1.04, G + 28); x.stroke(); }
-    x.lineWidth = 1.6; x.beginPath(); x.ellipse(DOG_X - 8, G + 6, 138, 14, 0, 0, Math.PI * 2); x.stroke();
-    x.restore();
-    x.strokeStyle = '#fff'; x.lineWidth = 1.2;
-    for (const side of [-1, 1]) for (let i = 0; i < 5; i++) { const sx = DOG_X - 8 + side * 152, sy = G + 6 - 8 + i * 4; x.beginPath(); x.moveTo(sx, sy); x.lineTo(sx + side * (7 + (i % 2) * 3), sy + 1); x.stroke(); }
-  }) });
-  // Shadow on the mat.
-  ink('usuD', (x) => { const g = x.createRadialGradient(DOG_X - 10, G + 4, 10, DOG_X - 10, G + 4, 120); g.addColorStop(0, white(0.4)); g.addColorStop(1, white(0)); x.fillStyle = g; x.save(); x.scale(1, 0.18); x.translate(0, (G + 4) * (1 / 0.18 - 1)); x.beginPath(); x.arc(DOG_X - 10, G + 4, 120, 0, Math.PI * 2); x.fill(); x.restore(); });
+  const dark = (x, p, a = 1) => { x.fillStyle = white(a); x.fill(p); };
+  // A hollow pressed into the snow.
+  ink('usuD', (x) => { x.save(); x.translate(DOG_X - 10, G + 4); x.scale(1, 0.16); const g = x.createRadialGradient(0, 0, 10, 0, 0, 130); g.addColorStop(0, white(0.5)); g.addColorStop(1, white(0)); x.fillStyle = g; x.beginPath(); x.arc(0, 0, 130, 0, Math.PI * 2); x.fill(); x.restore(); });
+
+  // Front paws, white socks, reaching out under the chin.
   const paws = new Path2D();
-  capsule(paws, ...Tf(-58, -6), 9, ...Tf(-118, -4), 7.5);
-  capsule(paws, ...Tf(-48, -2), 9, ...Tf(-108, 0), 7.5);
+  capsule(paws, ...Tf(-50, -7), 9.5, ...Tf(-114, -5), 7.5);
+  capsule(paws, ...Tf(-40, -2), 9.5, ...Tf(-104, 0), 7.5);
   figure({ shapes: [{ p: paws }], kw: 2.2, after: () => ink('keyD', (x) => {
-    x.strokeStyle = '#fff'; x.lineWidth = 1.3;
-    for (const [px, py] of [[-118, -4], [-108, 0]]) for (const d of [-3, 2]) { x.beginPath(); x.moveTo(...Tf(px + 2, py + d)); x.lineTo(...Tf(px - 4, py + d)); x.stroke(); }
+    x.strokeStyle = '#fff'; x.lineWidth = 1.2;
+    for (const [px, py] of [[-114, -5], [-104, 0]]) for (const d of [-3, 2]) { x.beginPath(); x.moveTo(...Tf(px + 3, py + d)); x.lineTo(...Tf(px - 3, py + d)); x.stroke(); }
   }) });
-  const body = pathIn(T).M(-60, -10).C(-66, -52, -18, -72, 30, -67).C(72, -63, 98, -40, 93, -14).C(90, 0, 70, 4, 40, 2).L(-40, 2).C(-56, 2, -60, -2, -60, -10).Z().p;
-  const tail = new Path2D(pathIn(T).M(80, -44).C(104, -60, 98, -88, 74, -80).C(60, -74, 64, -60, 78, -60).p);
-  figure({ shapes: [{ p: body }, { p: tail, w: 13 }], kw: 2.4,
-    after: () => {
-      ink('usuD', (x) => {
-        x.save(); x.clip(body);
-        x.fillStyle = white(0.9);
-        x.beginPath(); x.ellipse(...T(16, -60), 34, 15, -0.12, 0, Math.PI * 2); x.fill();
-        x.beginPath(); x.ellipse(...T(70, -40), 18, 12, 0.5, 0, Math.PI * 2); x.fill();
-        x.restore();
-      });
-      ink('keyD', (x) => {
-        x.strokeStyle = '#fff'; x.lineWidth = 1.9;
-        x.beginPath(); x.moveTo(...T(36, 0)); x.bezierCurveTo(...T(72, -4), ...T(80, -36), ...T(56, -48)); x.stroke();
-        x.lineWidth = 1.3;
-        x.beginPath(); x.moveTo(...T(74, -62)); x.quadraticCurveTo(...T(86, -70), ...T(90, -62)); x.stroke();
-      });
-      const hp = new Path2D(); capsule(hp, ...Tf(34, -3), 7.5, ...Tf(64, -3), 6.5);
-      ink('keyD', (x) => { x.save(); x.globalCompositeOperation = 'destination-out'; x.fill(hp); x.restore(); x.strokeStyle = '#fff'; x.lineWidth = 2; x.stroke(hp); });
-    } });
-  const head = pathIn(Tf).M(-56, -50).C(-70, -66, -98, -62, -106, -42).C(-112, -34, -120, -30, -126, -26).C(-128, -18, -120, -14, -108, -14).C(-90, -12, -66, -10, -54, -20).C(-48, -28, -48, -42, -56, -50).Z().p;
+
+  // Ears: rounded triangles, set back in sleep, pricking up when the fox passes.
   const lift = alert ? 1 : 0;
-  const ear = pathIn(Tf).M(-82, -54).L(-60 + lift * 4, -70 - lift * 10).L(-64, -46).Z().p;
-  figure({ shapes: [{ p: head }], kw: 2.4, after: () => {
-    ink('usuD', (x) => { x.save(); x.clip(head); x.fillStyle = white(0.9); x.beginPath(); x.ellipse(...Tf(-94, -38), 13, 9, -0.2, 0, Math.PI * 2); x.fill(); x.restore(); });
+  const earPath = (dx, dy) => pathIn((x, y) => Tf(x + dx, y + dy)).M(-82, -57)
+    .C(-80, -66 - lift * 4, -74 + lift * 2, -72 - lift * 8, -64 + lift * 4, -76 - lift * 8)
+    .C(-62 + lift * 2, -72 - lift * 4, -60, -66, -58, -59).Z().p;
+  const innerEar = pathIn(Tf).M(-77, -60).C(-75, -65 - lift * 3, -71 + lift * 2, -69 - lift * 6, -66 + lift * 4, -71 - lift * 7).C(-65, -68, -64, -64, -63, -60).Z().p;
+  figure({ shapes: [{ p: earPath(12, -2) }], kw: 2, fills: [['usuD', 1]], after: () => ink('keyD', (x) => { x.save(); x.clip(earPath(12, -2)); x.fillStyle = white(0.55); x.fillRect(DOG_X - 90, G - 110, 60, 60); x.restore(); }) });
+
+  // Head: a wedge with a short muzzle; black cap, tan brows (maro-mayu), white cheeks.
+  const head = pathIn(Tf).M(-44, -46).C(-46, -62, -70, -66, -86, -58).C(-96, -52, -100, -45, -105, -39)
+    .C(-113, -35, -121, -31, -127, -27).C(-129, -20, -123, -16, -112, -16).C(-96, -14, -70, -11, -50, -17)
+    .C(-42, -23, -41, -36, -44, -46).Z().p;
+  // Body and tail.
+  const body = pathIn(T).M(-46, -30).C(-50, -58, -18, -67, 22, -63).C(62, -60, 97, -50, 97, -22).C(97, -4, 84, 2, 60, 2).L(-30, 2).C(-44, 2, -48, -14, -46, -30).Z().p;
+  const tail = pathIn(T).M(88, -48).C(106, -72, 88, -96, 64, -86).C(50, -80, 54, -66, 68, -64).p;
+  figure({ shapes: [{ p: body }, { p: tail, w: 15 }, { p: head }], kw: 2.4,
+    after: () => {
+      const saddle = new Path2D(); saddle.addPath(body); saddle.addPath(tail);
+      // Black saddle over the back, softening into tan along the flank.
+      ink('usuD', (x) => { x.save(); x.clip(body); const [a, b] = T(0, -66), [c, d] = T(0, -26); const g = x.createLinearGradient(a, b, c, d); g.addColorStop(0, white(1)); g.addColorStop(0.75, white(0.9)); g.addColorStop(1, white(0)); x.fillStyle = g; x.fillRect(DOG_X - 60, G - 90, 170, 92); x.restore(); });
+      ink('keyD', (x) => { x.save(); x.clip(body); const [a, b] = T(0, -66), [c, d] = T(0, -34); const g = x.createLinearGradient(a, b, c, d); g.addColorStop(0, white(0.5)); g.addColorStop(1, white(0)); x.fillStyle = g; x.fillRect(DOG_X - 60, G - 90, 170, 92); x.restore(); });
+      ink('ochre', (x) => { x.save(); x.clip(body); const [a, b] = T(0, -46), [c, d] = T(0, -14); const g = x.createLinearGradient(a, b, c, d); g.addColorStop(0, white(0)); g.addColorStop(0.45, white(0.42)); g.addColorStop(1, white(0)); x.fillStyle = g; x.fillRect(DOG_X - 60, G - 90, 170, 92); x.restore(); });
+      // Tail: dark on top, the white underside showing in the curl.
+      ink('usuD', (x) => { x.lineWidth = 15; x.strokeStyle = white(1); x.stroke(tail); });
+      ink('keyD', (x) => { x.lineWidth = 15; x.strokeStyle = white(0.45); x.stroke(tail); });
+      const curl = pathIn(T).M(66, -70).C(72, -76, 82, -74, 84, -66).p;
+      ['usuD', 'keyD'].forEach((n) => ink(n, (x) => { x.globalCompositeOperation = 'destination-out'; x.lineWidth = 7; x.strokeStyle = '#fff'; x.stroke(curl); }));
+      ink('keyD', (x) => {
+        x.strokeStyle = '#fff';
+        // The haunch and a hind paw tucked forward.
+        x.lineWidth = 1.9; x.beginPath(); x.moveTo(...T(38, 0)); x.bezierCurveTo(...T(72, -2), ...T(84, -32), ...T(62, -46)); x.stroke();
+        x.lineWidth = 1.2; for (let i = 0; i < 3; i++) { x.beginPath(); x.moveTo(...T(76 + i * 4, -66 - i * 3)); x.lineTo(...T(80 + i * 4, -72 - i * 3)); x.stroke(); }
+      });
+      const hp = new Path2D(); capsule(hp, ...Tf(36, -4), 7.5, ...Tf(64, -4), 6.5);
+      ['usuD', 'ochre', 'keyD'].forEach((n) => ink(n, (x) => { x.globalCompositeOperation = 'destination-out'; x.fill(hp); }));
+      ink('keyD', (x) => { x.strokeStyle = '#fff'; x.lineWidth = 2; x.stroke(hp); });
+    } });
+
+  {
+    const cap = pathIn(Tf).M(-36, -72).L(-36, -36).C(-52, -34, -70, -38, -84, -42).C(-96, -38, -110, -34, -130, -30).L(-130, -72).Z().p;
+    ink('usuD', (x) => { x.save(); x.clip(head); dark(x, cap); x.restore(); });
+    ink('keyD', (x) => { x.save(); x.clip(head); dark(x, cap, 0.5); x.restore(); });
+    // Tan: brow spots and a band along the cheek.
+    const brow = new Path2D(); brow.ellipse(...Tf(-86, -48), 6, 3.6, -0.3, 0, Math.PI * 2);
+    const cheek = new Path2D(); cheek.ellipse(...Tf(-74, -34), 14, 4, 0.15, 0, Math.PI * 2);
+    ['usuD', 'keyD'].forEach((n) => ink(n, (x) => { x.globalCompositeOperation = 'destination-out'; x.fill(brow); }));
+    ink('ochre', (x) => { x.save(); x.clip(head); x.fillStyle = white(0.85); x.fill(brow); x.fillStyle = white(0.5); x.fill(cheek); x.restore(); });
     ink('keyD', (x) => {
       x.strokeStyle = '#fff'; x.fillStyle = '#fff';
-      x.lineWidth = 2; x.beginPath(); x.moveTo(...Tf(-102, -37)); x.quadraticCurveTo(...Tf(-96, alert ? -36 : -32), ...Tf(-89, -36)); x.stroke();
-      x.beginPath(); x.arc(...Tf(-125, -26), 3.6, 0, Math.PI * 2); x.fill();
-      x.lineWidth = 1.4; x.beginPath(); x.moveTo(...Tf(-124, -19)); x.quadraticCurveTo(...Tf(-116, -17), ...Tf(-110, -19)); x.stroke();
+      if (alert) { x.beginPath(); x.ellipse(...Tf(-95, -38), 3, 2.4, 0, 0, Math.PI * 2); x.fill(); }
+      else { x.lineWidth = 2; x.beginPath(); x.moveTo(...Tf(-101, -39)); x.quadraticCurveTo(...Tf(-95, -35), ...Tf(-89, -38)); x.stroke(); }
+      x.beginPath(); x.arc(...Tf(-126, -26), 3.6, 0, Math.PI * 2); x.fill();
+      x.lineWidth = 1.3; x.beginPath(); x.moveTo(...Tf(-124, -19)); x.quadraticCurveTo(...Tf(-116, -17), ...Tf(-108, -19)); x.stroke();
+      // Ruff where the cheek meets the neck.
+      for (let i = 0; i < 3; i++) { x.beginPath(); x.moveTo(...Tf(-56 + i * 4, -20 - i * 3)); x.lineTo(...Tf(-50 + i * 4, -18 - i * 3)); x.stroke(); }
     });
+  }
+  figure({ shapes: [{ p: earPath(0, 0) }], kw: 2.2, fills: [['usuD', 1]], after: () => {
+    ink('keyD', (x) => { x.save(); x.clip(earPath(0, 0)); x.fillStyle = white(0.5); x.fillRect(DOG_X - 100, G - 110, 60, 60); x.globalCompositeOperation = 'destination-out'; x.fill(innerEar); x.restore(); });
+    ink('usuD', (x) => { x.globalCompositeOperation = 'destination-out'; x.fill(innerEar); });
+    ink('ochre', (x) => { x.fillStyle = white(0.45); x.fill(innerEar); });
+    ink('keyD', (x) => { x.strokeStyle = '#fff'; x.lineWidth = 1.1; for (let i = 0; i < 2; i++) { x.beginPath(); x.moveTo(...Tf(-73 + i * 5, -60)); x.lineTo(...Tf(-70 + i * 4, -66 - lift * 3)); x.stroke(); } });
   } });
-  figure({ shapes: [{ p: ear }], kw: 2.2, fills: [['usuD', 0.9]] });
 }
 
 /* ---------- fox fires: carved out of the night, printed pale yellow with a warm edge ---------- */
