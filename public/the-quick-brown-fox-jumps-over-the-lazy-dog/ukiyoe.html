@@ -187,15 +187,17 @@ function ink(plate, fn) { const x = PL[plate].x; x.save(); logical(x); x.lineCap
 /* ---------- the fox ---------- */
 /* Angles: 0 points straight down, positive swings forward (the fox faces right). */
 const POSES = {
-  run1: { tilt: 0.03, arch: -2, st: 1.08, head: 0.02, tail: 0.12, curl: 0.25, nf: [1.0, 1.25, 1.9], ff: [0.75, 0.95, 1.8], nh: [-0.55, -1.2, -1.15, -0.5], fh: [-0.75, -1.35, -1.3, -0.7] },
-  run2: { tilt: -0.04, arch: 6, st: 0.96, head: 0.1, tail: 0.28, curl: 0.5, nf: [0.15, -0.05, 1.0], ff: [-0.15, -0.3, 0.7], nh: [-0.1, -0.95, -0.55, 0.2], fh: [-0.3, -1.1, -0.8, 0] },
-  run3: { tilt: -0.02, arch: 9, st: 0.9, head: 0.14, tail: 0.32, curl: 0.55, nf: [-0.45, -0.55, 0.3], ff: [-0.2, -0.3, 0.6], nh: [0.9, 0.0, 0.5, 1.3], fh: [0.7, -0.15, 0.35, 1.2] },
-  run4: { tilt: 0.0, arch: 3, st: 1.0, head: 0.06, tail: 0.2, curl: 0.4, nf: [0.45, 0.3, 1.5], ff: [0.25, 0.05, 1.4], nh: [0.45, -0.55, 0.0, 1.0], fh: [0.2, -0.8, -0.25, 0.8] },
-  crouch: { tilt: -0.12, arch: 12, st: 0.88, head: -0.12, tail: 0.35, curl: 0.5, nf: [-0.25, 0.15, 1.5], ff: [-0.05, 0.3, 1.5], nh: [1.15, -1.0, 0.35, 1.3], fh: [1.0, -1.1, 0.25, 1.3] },
-  takeoff: { tilt: 0.4, arch: -2, st: 1.06, head: 0.15, tail: 0.25, curl: 0.3, nf: [1.1, 1.0, 1.3], ff: [0.85, 0.6, 1.1], nh: [-0.7, -1.3, -1.5, -1.6], fh: [-0.5, -1.15, -1.3, -1.4] },
-  flight: { tilt: 0.04, arch: -6, st: 1.1, head: 0.04, tail: 0.3, curl: 0.25, nf: [1.2, 1.35, 1.0], ff: [0.95, 1.05, 0.8], nh: [-0.7, -1.25, -1.05, -0.6], fh: [-0.45, -1.05, -0.8, -0.3] },
-  reach: { tilt: -0.32, arch: 2, st: 1.04, head: -0.12, tail: 0.4, curl: 0.3, nf: [0.6, 0.35, 1.3], ff: [0.85, 0.65, 1.4], nh: [0.5, -0.9, -0.2, 0.6], fh: [0.3, -1.0, -0.4, 0.4] },
-  land: { tilt: -0.16, arch: 8, st: 0.9, head: -0.05, tail: 0.5, curl: 0.45, nf: [0.12, -0.15, 1.4], ff: [0.32, 0.1, 1.45], nh: [0.65, -0.45, 0.3, 1.0], fh: [0.45, -0.65, 0.15, 1.0] },
+  run1:    { tilt:  0.04, arch: -3, st: 1.07, head:  0.02, tail: 0.14, curl: 0.24, nf: [ 0.82,  1.02,  0.52], ff: [ 0.44,  0.60,  0.22], nh: [-0.44, -1.16, -0.78, -1.10], fh: [-0.66, -1.30, -0.96, -1.28] },
+  run2:    { tilt: -0.04, arch:  5, st: 0.97, head:  0.08, tail: 0.26, curl: 0.46, nf: [ 0.34,  0.26,  1.22], ff: [-0.14, -0.38, -0.08], nh: [ 0.16, -0.82, -0.22,  0.10], fh: [-0.12, -1.04, -0.50, -0.28] },
+  run3:    { tilt: -0.02, arch: 10, st: 0.90, head:  0.12, tail: 0.32, curl: 0.54, nf: [-0.32, -0.80, -0.44], ff: [-0.04, -0.56, -0.18], nh: [ 0.92, -0.26,  0.40,  1.12], fh: [ 0.64, -0.50,  0.16,  0.82] },
+  run4:    { tilt:  0.01, arch:  2, st: 1.01, head:  0.05, tail: 0.20, curl: 0.38, nf: [ 0.52,  0.28, -0.12], ff: [ 0.20, -0.06, -0.34], nh: [ 0.34, -0.78, -0.12,  0.92], fh: [ 0.04, -1.02, -0.40,  0.58] },
+  crouch:  { tilt: -0.14, arch: 13, st: 0.88, head: -0.10, tail: 0.34, curl: 0.50, nf: [-0.18,  0.08,  1.34], ff: [ 0.06,  0.26,  1.38], nh: [ 1.04, -0.94,  0.26,  1.26], fh: [ 0.82, -1.08,  0.10,  1.18] },
+  takeoff: { tilt:  0.35, arch: -3, st: 1.05, head:  0.14, tail: 0.24, curl: 0.28, nf: [ 0.84,  0.44, -0.06], ff: [ 0.44, -0.06, -0.56], nh: [-0.42, -1.12, -0.90, -1.24], fh: [-0.12, -0.94, -0.60, -0.92] },
+  rise:    { tilt:  0.17, arch: -7, st: 1.08, head:  0.08, tail: 0.27, curl: 0.26, nf: [ 0.96,  0.82,  0.32], ff: [ 0.66,  0.40, -0.08], nh: [-0.54, -1.20, -0.92, -1.22], fh: [-0.28, -1.04, -0.68, -0.96] },
+  apex:    { tilt: -0.02, arch: -8, st: 1.10, head:  0.03, tail: 0.30, curl: 0.24, nf: [ 1.02,  1.08,  0.56], ff: [ 0.74,  0.70,  0.20], nh: [-0.46, -1.14, -0.80, -1.02], fh: [-0.18, -0.96, -0.56, -0.74] },
+  descend: { tilt: -0.22, arch: -1, st: 1.06, head: -0.06, tail: 0.36, curl: 0.28, nf: [ 0.76,  0.60,  0.44], ff: [ 0.94,  0.86,  0.70], nh: [ 0.16, -0.92, -0.34, -0.14], fh: [ 0.40, -0.78, -0.12,  0.14] },
+  reach:   { tilt: -0.30, arch:  3, st: 1.02, head: -0.12, tail: 0.42, curl: 0.34, nf: [ 0.48,  0.34,  1.16], ff: [ 0.72,  0.62,  1.26], nh: [ 0.60, -0.68,  0.04,  0.54], fh: [ 0.36, -0.86, -0.22,  0.28] },
+  land:    { tilt: -0.14, arch:  9, st: 0.91, head: -0.05, tail: 0.48, curl: 0.44, nf: [ 0.12, -0.12,  1.32], ff: [ 0.32,  0.14,  1.38], nh: [ 0.74, -0.42,  0.30,  1.10], fh: [ 0.46, -0.68,  0.08,  0.90] },
 };
 const RUN = ['run1', 'run2', 'run3', 'run4'];
 function mix(a, b, t) {
@@ -203,8 +205,10 @@ function mix(a, b, t) {
   for (const k in a) o[k] = Array.isArray(a[k]) ? a[k].map((v, i) => lerp(v, b[k][i], t)) : lerp(a[k], b[k], t);
   return o;
 }
-const FRONT = [36, 36, 13], FRONT_R = [12, 6.5, 5, 4.6];
-const HIND = [40, 38, 30, 11], HIND_R = [19, 9, 6, 5, 4.4];
+/* Balanced fox limb proportions: slender reaching forelegs, compact muscular hindlegs
+   with fine wrists/ankles and neat tapered paws rather than uniform tubes. */
+const FRONT = [34, 42, 16], FRONT_R = [13.5, 6.2, 4.1, 3.2];
+const HIND = [34, 30, 24, 14], HIND_R = [18.5, 8.6, 4.7, 3.7, 3.1];
 function legChain(x, y, angles, lens, radii) {
   const pts = [[x, y]];
   angles.forEach((a, i) => { x += Math.sin(a) * lens[i]; y += Math.cos(a) * lens[i]; pts.push([x, y]); });
@@ -222,7 +226,10 @@ function foxRig(pose, X, air) {
   };
   let low = -Infinity;
   for (const l of Object.values(legs)) for (const [, y] of l.pts) low = Math.max(low, y + 4);
-  const tx = X, ty = G - air - low;
+  // Keep a smooth centre-of-mass arc while airborne instead of letting extended paws yank the torso.
+  const airBlend = clamp(air / 28, 0, 1);
+  const baseLow = lerp(low, 66, airBlend * airBlend * (3 - 2 * airBlend));
+  const tx = X, ty = G - air - baseLow;
   const T = (x, y) => { const [u, v] = Bd(x, y); return [u + tx, v + ty]; };
   const hc = Math.cos(-pose.head), hs = Math.sin(-pose.head);
   const N = [60, -30];
@@ -231,17 +238,59 @@ function foxRig(pose, X, air) {
   for (const l of Object.values(legs)) l.pts = l.pts.map(([x, y]) => [x + tx, y + ty]);
   return { T, TH, TT, legs, pose, ground: ty + low };
 }
+/* Organic single-contour limb outline: smooth muscle taper through joints into a neat paw tip. */
 function legPath(l) {
+  const { pts, radii } = l;
+  const n = pts.length;
+  const segN = [];
+  for (let i = 0; i < n - 1; i++) {
+    const dx = pts[i + 1][0] - pts[i][0], dy = pts[i + 1][1] - pts[i][1];
+    const d = Math.hypot(dx, dy) || 1;
+    segN.push([dy / d, -dx / d]); // right-hand normal
+  }
+  const left = [], right = [];
+  for (let i = 0; i < n; i++) {
+    let nx, ny;
+    if (i === 0) { [nx, ny] = segN[0]; }
+    else if (i === n - 1) { [nx, ny] = segN[n - 2]; }
+    else {
+      nx = segN[i - 1][0] + segN[i][0]; ny = segN[i - 1][1] + segN[i][1];
+      const nl = Math.hypot(nx, ny) || 1;
+      // Preserve thickness cleanly around sharper bends (knee / hock / wrist).
+      const dot = clamp(segN[i - 1][0] * (nx / nl) + segN[i - 1][1] * (ny / nl), 0.55, 1);
+      nx = (nx / nl) / dot; ny = (ny / nl) / dot;
+    }
+    const r = radii[i];
+    right.push([pts[i][0] + nx * r, pts[i][1] + ny * r]);
+    left.push([pts[i][0] - nx * r, pts[i][1] - ny * r]);
+  }
+  const dxEnd = pts[n - 1][0] - pts[n - 2][0], dyEnd = pts[n - 1][1] - pts[n - 2][1];
+  const dEnd = Math.hypot(dxEnd, dyEnd) || 1;
+  const tipX = pts[n - 1][0] + (dxEnd / dEnd) * radii[n - 1] * 1.15;
+  const tipY = pts[n - 1][1] + (dyEnd / dEnd) * radii[n - 1] * 1.15;
+
   const p = new Path2D();
-  for (let i = 0; i < l.pts.length - 1; i++) capsule(p, ...l.pts[i], l.radii[i], ...l.pts[i + 1], l.radii[i + 1]);
+  p.moveTo(...right[0]);
+  for (let i = 1; i < n - 1; i++) {
+    const mx = (right[i][0] + right[i + 1][0]) * 0.5, my = (right[i][1] + right[i + 1][1]) * 0.5;
+    p.quadraticCurveTo(right[i][0], right[i][1], mx, my);
+  }
+  p.lineTo(...right[n - 1]);
+  p.quadraticCurveTo(tipX, tipY, ...left[n - 1]);
+  for (let i = n - 2; i >= 1; i--) {
+    const mx = (left[i][0] + left[i - 1][0]) * 0.5, my = (left[i][1] + left[i - 1][1]) * 0.5;
+    p.quadraticCurveTo(left[i][0], left[i][1], mx, my);
+  }
+  p.lineTo(...left[0]);
+  p.closePath();
   return p;
 }
 function lowerLegPath(l, from) {
   const p = new Path2D();
   const [ax, ay] = l.pts[from], [bx, by] = l.pts[from + 1];
   const m = [lerp(ax, bx, 0.45), lerp(ay, by, 0.45)];
-  capsule(p, ...m, lerp(l.radii[from], l.radii[from + 1], 0.45) + 0.4, bx, by, l.radii[from + 1] + 0.4);
-  for (let i = from + 1; i < l.pts.length - 1; i++) capsule(p, ...l.pts[i], l.radii[i] + 0.4, ...l.pts[i + 1], l.radii[i + 1] + 0.4);
+  capsule(p, ...m, lerp(l.radii[from], l.radii[from + 1], 0.45) + 1.2, bx, by, l.radii[from + 1] + 1.2);
+  for (let i = from + 1; i < l.pts.length - 1; i++) capsule(p, ...l.pts[i], l.radii[i] + 1.2, ...l.pts[i + 1], l.radii[i + 1] + 1.2);
   return p;
 }
 function tailPaths(rig) {
@@ -290,9 +339,16 @@ function drawFox(rig) {
   const earTip = (dx) => (x) => { x.save(); x.clip(ear(dx)); x.fillStyle = white(1); x.fill(pathIn(TH).M(-20 + dx, -60).L(30 + dx, -60).L(30 + dx, -38).C(10 + dx, -34, 0 + dx, -36, -20 + dx, -40).Z().p); x.restore(); };
   const innerEar = pathIn(TH).M(0, -18).C(-2, -28, 0, -37, 4, -42).C(8, -35, 11, -27, 13, -19).Z().p;
   const tail = tailPaths(rig);
-  // Far legs, a shade lighter.
-  figure({ shapes: [{ p: legPath(legs.fh) }, { p: legPath(legs.ff) }], fills: [['ochre', 0.62]],
-    after: () => { const p = new Path2D(); p.addPath(lowerLegPath(legs.fh, 1)); p.addPath(lowerLegPath(legs.ff, 1)); ink('usuD', (x) => { x.fillStyle = white(0.95); x.fill(p); }); } });
+  // Far legs, a shade lighter, with dark socks clipped cleanly to each slender limb.
+  const farH = legPath(legs.fh), farF = legPath(legs.ff);
+  figure({ shapes: [{ p: farH }, { p: farF }], fills: [['ochre', 0.62]],
+    after: () => {
+      ink('usuD', (x) => {
+        x.fillStyle = white(0.95);
+        x.save(); x.clip(farH); x.fill(lowerLegPath(legs.fh, 1)); x.restore();
+        x.save(); x.clip(farF); x.fill(lowerLegPath(legs.ff, 1)); x.restore();
+      });
+    } });
   // The tail is part of the body's outline, so no seam shows where it joins.
   const tailAfter = () => {
       ink('ochre', (x) => { x.globalCompositeOperation = 'destination-out'; x.fill(tail.tip); });
@@ -310,7 +366,8 @@ function drawFox(rig) {
   };
   figure({ shapes: [{ p: ear(-10) }], fills: [['ochre', 0.85]], after: () => ink('usuD', earTip(-10)) });
   const back = (x) => { const [a, b] = T(0, -36 - arch), [c, d] = T(0, 32); const g = x.createLinearGradient(a, b, c, d); g.addColorStop(0, white(1)); g.addColorStop(0.55, white(0.82)); g.addColorStop(1, white(0.62)); return g; };
-  figure({ shapes: [{ p: tail.all }, { p: torso }, { p: neck }, { p: head }, { p: legPath(legs.nh) }, { p: legPath(legs.nf) }], fills: [['ochre', back]],
+  const nearH = legPath(legs.nh), nearF = legPath(legs.nf);
+  figure({ shapes: [{ p: tail.all }, { p: torso }, { p: neck }, { p: head }, { p: nearH }, { p: nearF }], fills: [['ochre', back]],
     after: () => {
       tailAfter();
       // White chest, throat and cheek: carved out of the brown block.
@@ -320,7 +377,11 @@ function drawFox(rig) {
         x.fill(pathIn(TH).M(6, 5).C(20, 10, 34, 8, 46, 6).L(40, 9).C(28, 14, 10, 21, -4, 16).C(-2, 10, 2, 7, 6, 5).Z().p);
         x.fill(pathIn((u, v) => (u > 1000 ? TH(u - 2000, v) : T(u, v))).M(2000 - 2, 14).L(2000 + 8, 12).Q(66, 4, 62, 26).Q(56, 10, 2000 - 2, 14).Z().p);
       });
-      ink('usuD', (x) => { x.fillStyle = white(1); x.fill(lowerLegPath(legs.nh, 1)); x.fill(lowerLegPath(legs.nf, 1)); });
+      ink('usuD', (x) => {
+        x.fillStyle = white(1);
+        x.save(); x.clip(nearH); x.fill(lowerLegPath(legs.nh, 1)); x.restore();
+        x.save(); x.clip(nearF); x.fill(lowerLegPath(legs.nf, 1)); x.restore();
+      });
       ink('keyD', (x) => {
         x.strokeStyle = '#fff'; x.fillStyle = '#fff';
         // The near elbow.
@@ -670,23 +731,42 @@ const procession = (() => { const r = rng(3); return Array.from({ length: 14 }, 
 
 const X0 = -240, XT = 594, XL = 1124, X1 = 1760, V = 430, LEAP = 0.85, PEAK = 150;
 const tTake = (XT - X0) / V, tLand = tTake + LEAP, tEnd = tLand + (X1 - XL) / V;
+function runPose(t) {
+  // ~2.55 full gallop strides per second (~169 px/stride at V = 430 px/s), matching ground speed without skating.
+  const cyc = ((t * 10.2) % 4 + 4) % 4;
+  const i = Math.floor(cyc), f = cyc - i;
+  const s = f * f * (3 - 2 * f);
+  return {
+    pose: mix(POSES[RUN[i]], POSES[RUN[(i + 1) % 4]], s),
+    bob: Math.max(0, Math.cos(cyc * Math.PI * 0.5)) * 6,
+  };
+}
 function foxAt(t) {
   if (t < tTake) {
-    const x = X0 + V * t, f = Math.floor(t * FPS);
+    const x = X0 + V * t;
     const left = tTake - t;
-    if (left < 1.5 / FPS) return { x, air: 0, pose: POSES.crouch };
-    return { x, air: 0, pose: POSES[RUN[f % 4]], bob: f % 4 === 0 ? 4 : 0 };
+    const base = runPose(t);
+    if (left < 0.22) {
+      const k = clamp(1 - left / 0.22, 0, 1);
+      return { x, air: 0, pose: mix(base.pose, POSES.crouch, k * k), bob: base.bob * (1 - k) };
+    }
+    return { x, air: 0, pose: base.pose, bob: base.bob };
   }
   if (t < tLand) {
     const p = (t - tTake) / LEAP, x = lerp(XT, XL, p), air = 4 * PEAK * p * (1 - p);
-    const keys = [[0, 'takeoff'], [0.28, 'flight'], [0.7, 'flight'], [0.9, 'reach'], [1, 'land']];
+    const keys = [[0, 'takeoff'], [0.22, 'rise'], [0.50, 'apex'], [0.76, 'descend'], [0.92, 'reach'], [1, 'land']];
     let i = 0; while (i < keys.length - 2 && p > keys[i + 1][0]) i++;
     const [p0, a] = keys[i], [p1, b] = keys[i + 1];
-    return { x, air, pose: mix(POSES[a], POSES[b], clamp((p - p0) / (p1 - p0), 0, 1)) };
+    const u = clamp((p - p0) / (p1 - p0), 0, 1);
+    return { x, air, pose: mix(POSES[a], POSES[b], u * u * (3 - 2 * u)) };
   }
-  const x = XL + V * (t - tLand), f = Math.floor((t - tLand) * FPS);
-  if (f < 1) return { x, air: 0, pose: POSES.land };
-  return { x, air: 0, pose: POSES[RUN[(f + 1) % 4]], bob: (f + 1) % 4 === 0 ? 4 : 0 };
+  const dt = t - tLand, x = XL + V * dt;
+  const base = runPose(dt + 0.18);
+  if (dt < 0.18) {
+    const k = clamp(dt / 0.18, 0, 1);
+    return { x, air: 0, pose: mix(POSES.land, base.pose, k * (2 - k)), bob: base.bob * k };
+  }
+  return { x, air: 0, pose: base.pose, bob: base.bob };
 }
 
 function drawDynamic(time) {
